@@ -504,17 +504,6 @@
       ]
     }
   },
-  "adzunaLabels": {
-    "retail-jobs": "Retail",
-    "customer-services-jobs": "Customer Service",
-    "hospitality-catering-jobs": "Hospitality",
-    "healthcare-nursing-jobs": "Healthcare",
-    "it-jobs": "Technology",
-    "teaching-jobs": "Education",
-    "trade-construction-jobs": "Skilled Trades",
-    "logistics-warehouse-jobs": "Warehouse",
-    "admin-jobs": "Office"
-  },
   "museCategories": {
     "Retail": [
       "Retail"
@@ -547,6 +536,16 @@
     ],
     "Delivery": [
       "Transportation and Logistics"
+    ],
+    "Fast Food": [
+      "Food and Hospitality Services"
+    ],
+    "Restaurants": [
+      "Food and Hospitality Services"
+    ],
+    "Hospitality": [
+      "Food and Hospitality Services",
+      "Entertainment and Travel Services"
     ]
   },
   "transferableCategories": {

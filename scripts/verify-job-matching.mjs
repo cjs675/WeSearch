@@ -29,6 +29,7 @@ const SCENARIOS = [
 const EXTRAS = [
   ["Keyword: McDonald's", { resume: PROGRAMMER, keywords: "McDonald's" }],
   ["Keywords: cashier, part-time", { resume: FAST_FOOD, keywords: "cashier, part-time" }],
+  ...["Fast Food", "Retail", "Warehouse", "Customer Service", "Internships"].map((c) => [`Category: ${c}`, { resume: FAST_FOOD, categories: [c] }]),
 ];
 
 async function run(label, body, wanted = []) {

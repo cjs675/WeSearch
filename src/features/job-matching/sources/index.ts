@@ -1,5 +1,5 @@
 import type { JobCategory, JobSearchRequest, JobSourceStatus, JobType } from "@/types";
-import { ADZUNA_LABELS, MUSE_CATEGORIES } from "../taxonomy";
+import { MUSE_CATEGORIES } from "../taxonomy";
 import { hasAny, hasTerm, norm, safeUrl, stripHtml } from "../text";
 import { FEED_TTL_MS, getJson } from "./http";
 import { type JobSource, type SourceJob, SourceUnavailable } from "./types";
@@ -20,8 +20,8 @@ function money(value: unknown): number | null {
   return value !== null && value !== "" && Number.isFinite(n) && n > 0 ? n : null;
 }
 
-function salary(min: number | null, max: number | null, estimated = false) {
-  return min === null && max === null ? null : { min: min ?? undefined, max: max ?? undefined, estimated };
+function salary(min: number | null, max: number | null) {
+  return min === null && max === null ? null : { min: min ?? undefined, max: max ?? undefined, estimated: false };
 }
 
 export function detectJobType(title: string, description: string): JobType | null {
@@ -30,12 +30,6 @@ export function detectJobType(title: string, description: string): JobType | nul
   if (fromTitle) return fromTitle[1];
   const text = norm(description);
   return hasTerm(text, "part time") ? "part_time" : hasTerm(text, "full time") ? "full_time" : null;
-}
-
-export function detectRemote(title: string, location: string, description: string): boolean {
-  if (/\b(not|no|non)[ -]remote\b/i.test(description)) return false;
-  return hasAny(norm(`${title} ${location}`), ["remote", "work from home", "wfh"]) ||
-    hasAny(norm(description), ["fully remote", "100 remote", "work from home", "remote position", "remote role"]);
 }
 
 /** Null for a listing with no safe link: without one it can't be applied to. */
@@ -65,45 +59,6 @@ async function runQueries(queries: string[], request: (query: string) => Promise
   if (failure && !jobs.length) throw failure.reason;
   return jobs;
 }
-
-export function parseAdzuna(r: Raw, locationChecked: boolean): SourceJob | null {
-  const contract = r.contract_time ?? r.contract_type;
-  const title = String(r.title ?? "");
-  const description = String(r.description ?? "");
-  const location = r.location?.display_name ?? null;
-  const label = ADZUNA_LABELS[r.category?.tag];
-  return toJob("Adzuna", r.id, {
-    title, employer: r.company?.display_name, location, description, url: r.redirect_url, posted: r.created,
-    salary: salary(money(r.salary_min), money(r.salary_max), String(r.salary_is_predicted) === "1"),
-    jobType: ["full_time", "part_time", "contract"].includes(contract) ? contract : detectJobType(title, description),
-    remote: detectRemote(title, location ?? "", description),
-    labels: label ? [label] : [],
-    locationCheckedByApi: locationChecked,
-  });
-}
-
-const adzuna: JobSource = {
-  name: "Adzuna",
-  needsKey: "ADZUNA_APP_ID and ADZUNA_APP_KEY",
-  configured: () => Boolean(process.env.ADZUNA_APP_ID && process.env.ADZUNA_APP_KEY),
-  fetch(queries, _categories, request) {
-    const params: Record<string, string | number> = {
-      app_id: process.env.ADZUNA_APP_ID ?? "", app_key: process.env.ADZUNA_APP_KEY ?? "",
-      results_per_page: 50, sort_by: "date", "content-type": "application/json",
-    };
-    if (request.location) {
-      params.where = request.location;
-      if (request.distanceMiles) params.distance = Math.round(request.distanceMiles * 1.609);
-    }
-    if (request.jobType === "part_time") params.part_time = 1;
-    if (request.jobType === "full_time") params.full_time = 1;
-    if (request.jobType === "contract") params.contract = 1;
-    return runQueries(queries, async (what) => {
-      const data = await getJson<Raw>("https://api.adzuna.com/v1/api/jobs/us/search/1", { params: { ...params, what } });
-      return (data.results ?? []).map((r: Raw) => parseAdzuna(r, Boolean(request.location)));
-    });
-  },
-};
 
 export function parseUsaJobs(d: Raw, locationChecked: boolean): SourceJob | null {
   const pay = d.PositionRemuneration?.[0] ?? {};
@@ -141,6 +96,9 @@ const usaJobs: JobSource = {
   },
 };
 
+const MUSE_MAX_CATEGORIES = 5;
+const MUSE_PAGES = [0, 1, 2]; // Results aren't reliably newest-first, so one page misses recent listings
+
 export function parseMuse(r: Raw): SourceJob | null {
   const locations: string[] = (r.locations ?? []).map((l: Raw) => l.name ?? "");
   const levels = norm((r.levels ?? []).map((l: Raw) => l.name ?? "").join(" "));
@@ -160,10 +118,13 @@ const theMuse: JobSource = {
   configured: () => true,
   async fetch(_queries, categories: JobCategory[], request) {
     // The API has no text search, so without a category it has nothing to offer
-    const museCategories = [...new Set(categories.flatMap((c) => MUSE_CATEGORIES[c] ?? []))].slice(0, 4);
+    const museCategories = [...new Set(categories.flatMap((c) => MUSE_CATEGORIES[c] ?? []))].slice(0, MUSE_MAX_CATEGORIES);
     const params: Record<string, string | number> = { descending: "true" };
     if (request.location?.includes(",")) params.location = request.location; // Exact "City, ST" names only
-    const pages = museCategories.flatMap((category) => [0, 1].map((page) => ({ ...params, category, page })));
+    // Internships are a level in this API, not a category
+    const searches: Record<string, string>[] = museCategories.map((category) => ({ category }));
+    if (categories.includes("Internships")) searches.push({ level: "Internship" });
+    const pages = searches.flatMap((search) => MUSE_PAGES.map((page) => ({ ...params, ...search, page })));
     const jobs = await runQueries(pages.map((p) => JSON.stringify(p)), async (page) => {
       const data = await getJson<Raw>("https://www.themuse.com/api/public/jobs", { params: JSON.parse(page) });
       return (data.results ?? []).map(parseMuse);
@@ -221,7 +182,7 @@ const jobicy: JobSource = {
   },
 };
 
-export const SOURCES: JobSource[] = [adzuna, usaJobs, theMuse, remotive, jobicy];
+export const SOURCES: JobSource[] = [usaJobs, theMuse, remotive, jobicy];
 
 /** Ask every source at once. Returns the listings and one status per source, including failures. */
 export async function fetchAll(queries: string[], categories: JobCategory[], request: JobSearchRequest, sources: JobSource[] = SOURCES) {

@@ -31,15 +31,13 @@ The frontend must:
 - Never put a sign-up or email form in front of Remotive listings. Its terms forbid that.
 - Label skills in `skillsTypicalForRole` as typical for the role, and pay with `estimated: true` as an estimate.
 
-## Adding API keys
+## Job sources
 
-Without keys, only The Muse, Remotive, and Jobicy are used. They are mostly remote, tech, or a limited set of store jobs. Fast-food and other local searches need Adzuna.
+The Muse, Remotive, and Jobicy need no key. USAJOBS adds government listings and is optional:
 
-1. Get a free key at https://developer.adzuna.com/signup.
+1. Get a free key at https://developer.usajobs.gov/apirequest/.
 2. Copy `.env.example` to `.env.local`.
-3. Fill in `ADZUNA_APP_ID` and `ADZUNA_APP_KEY`, then restart the app.
-
-USAJOBS keys are optional and add government listings.
+3. Fill in `USAJOBS_EMAIL` and `USAJOBS_API_KEY`, then restart the app.
 
 ## Testing
 
@@ -63,9 +61,9 @@ The score adds up to 100: skills 45, experience 25, level fit 15, qualifications
 
 ## Known limits
 
-- Adzuna returns only a snippet of each posting, so requirements can be missed. `descriptionIsPartial` marks these.
-- Adzuna's apply link goes through Adzuna to reach the posting. It isn't always the employer's own page.
-- Distance is only applied by Adzuna and USAJOBS. Other sources match on city name or remote.
+- Local coverage is thin. The Muse is the only source with local non-government jobs, and it's mostly large employers, so a search for a specific restaurant brand often finds nothing.
+- Remotive and Jobicy are remote-only and mostly technical or professional roles.
+- The Muse and Remotive are browsed rather than searched, so only the listings fetched per search get matched. A real listing further back won't appear.
 - Listings older than 90 days are hidden by default, because many of The Muse's are over a year old.
-- The Muse has no text search, so it only contributes when a category applies.
-- Adzuna and USAJOBS field mapping is written from their documentation, and hasn't yet been run against the live APIs.
+- Distance is only applied by USAJOBS. Other sources match on city name or remote.
+- USAJOBS field mapping is written from its documentation, and hasn't yet been run against the live API.

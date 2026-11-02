@@ -1,5 +1,5 @@
 import type { JobCategory, JobMatch, JobSearchRequest, JobSearchResponse, JobSourceStatus, Resume } from "@/types";
-import { buildProfile, suggestedCategories } from "./profile";
+import { buildProfile, roleCategories, suggestedCategories } from "./profile";
 import { isEntryLevel, isSenior, requiredYears, scoreJob } from "./scoring";
 import { fetchAll } from "./sources";
 import type { JobSource, SourceJob } from "./sources/types";
@@ -141,7 +141,7 @@ export function applyFilters(items: Scored[], request: JobSearchRequest, now = D
   });
   const notes: string[] = [];
   if (counts.age) notes.push(`${counts.age} listings hidden for being posted over ${maxAge} days ago.`);
-  if (request.distanceMiles) notes.push("Distance is applied by Adzuna and USAJOBS. Other sources only match the same city name or remote.");
+  if (request.distanceMiles) notes.push("Distance is only applied by USAJOBS. Other sources match the same city name or remote.");
   if (request.jobType && kept.some(({ job }) => job.jobType === null)) notes.push("Listings that don't state a job type stay in the results.");
   if (request.minSalary && !request.salaryRequired && kept.some(({ job }) => yearlyPay(job) === null)) notes.push("Listings with no stated pay stay in the results.");
   return { kept, counts, notes };
@@ -149,7 +149,9 @@ export function applyFilters(items: Scored[], request: JobSearchRequest, now = D
 
 function emptyMessage(statuses: JobSourceStatus[], filtered: Record<string, number>): string {
   if (!statuses.some((s) => s.state === "ok")) return "No job source could be reached, so there are no results.";
-  if (Object.keys(filtered).length) return "Job sources responded, but your filters removed every match. Try loosening them.";
+  const reasons = Object.keys(filtered);
+  if (reasons.length === 1 && reasons[0] === "age") return "The only matches are old listings, which are hidden because they may have closed.";
+  if (reasons.length) return "Job sources responded, but your filters removed every match. Try loosening them.";
   return "Job sources responded, but none of their listings match this search.";
 }
 
@@ -169,9 +171,11 @@ export async function searchJobs(request: JobSearchRequest, resume?: Resume | nu
   }
 
   const searchCategories = explicit ? categories : suggested;
-  const aliased = keywords.map((k) => KEYWORD_CATEGORY_ALIASES[norm(k)]).filter(Boolean);
+  // Sources with no text search are browsed by category, so work out which ones a keyword points to.
+  // This only widens what's fetched: listings still have to match the keyword below.
+  const keywordCategories = keywords.flatMap((k) => KEYWORD_CATEGORY_ALIASES[norm(k)] ?? roleCategories(k, k));
   const { queries, titles } = generateTerms(searchCategories, keywords);
-  const { jobs: raw, statuses } = await fetchAll(queries, [...new Set([...searchCategories, ...aliased])], request, sources);
+  const { jobs: raw, statuses } = await fetchAll(queries, [...new Set([...searchCategories, ...keywordCategories])], request, sources);
   const entryOnly = !explicit && profile !== null && !profile.hasExperience;
 
   const scored: Scored[] = [];

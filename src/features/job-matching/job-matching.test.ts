@@ -4,7 +4,7 @@ import type { JobCategory, JobSearchRequest, Resume } from "@/types";
 import { buildProfile, suggestedCategories } from "./profile";
 import { scoreJob } from "./scoring";
 import { applyFilters, dedupe, generateTerms, jobCategories, keywordTier, searchJobs } from "./search";
-import { detectJobType, detectRemote, fetchAll, parseAdzuna, parseUsaJobs } from "./sources";
+import { detectJobType, fetchAll, parseJobicy, parseMuse, parseRemotive, parseUsaJobs, SOURCES } from "./sources";
 import { type JobSource, type SourceJob, SourceUnavailable } from "./sources/types";
 import { stripHtml } from "./text";
 
@@ -159,6 +159,7 @@ describe("filters", () => {
     const out = await searchJobs(request({ categories: ["Retail"] }), null, [fake([old])]);
     expect(out.matches).toEqual([]);
     expect(out.notes[0]).toContain("hidden");
+    expect(out.message).toContain("old listings");
   });
   it("applies a minimum score", async () => {
     const out = await searchJobs(request({ categories: ["Retail"], minScore: 99 }), PROGRAMMER, [fake([job("Retail Cashier")])]);
@@ -191,6 +192,13 @@ describe("required behavior", () => {
     expect(out.sources[0].state).toBe("error");
     expect(out.message).toContain("could be reached");
   });
+  it("browses the category a keyword points to, without loosening the match", async () => {
+    let browsed: JobCategory[] = [];
+    const source: JobSource = { ...fake(), fetch: async (_q, categories) => { browsed = categories; return [job("Cashier"), job("Stock Associate")]; } };
+    const out = await searchJobs(request({ keywords: ["cashier"] }), null, [source]);
+    expect(browsed).toContain("Retail");
+    expect(titles(out)).toEqual(["Cashier"]);
+  });
   it("says so when a source has nothing", async () => {
     const out = await searchJobs(request({ categories: ["Retail"] }), null, [fake()]);
     expect(out.matches).toEqual([]);
@@ -201,13 +209,6 @@ describe("required behavior", () => {
 describe("sources", () => {
   afterEach(() => vi.unstubAllEnvs());
   // Field mapping against documented shapes. These don't prove the live APIs work.
-  it("labels Adzuna's estimated pay", () => {
-    const j = parseAdzuna({ id: "1", title: "Cashier", company: { display_name: "X" }, location: { display_name: "Chicago" }, description: "d", redirect_url: "https://u.test/1",
-      created: "2026-10-01T00:00:00Z", salary_min: 30000, salary_is_predicted: "1", contract_time: "part_time", category: { tag: "retail-jobs" } }, true);
-    expect(j?.salary?.estimated).toBe(true);
-    expect(j?.jobType).toBe("part_time");
-    expect(j?.labels).toEqual(["Retail"]);
-  });
   it("converts USAJOBS hourly pay to yearly", () => {
     const j = parseUsaJobs({ PositionID: "1", PositionTitle: "Clerk", OrganizationName: "VA", ApplyURI: ["https://u.test/1"],
       PositionRemuneration: [{ MinimumRange: "20", MaximumRange: "25", RateIntervalCode: "PH" }], PositionSchedule: [{ Name: "Part-Time" }] }, false);
@@ -216,21 +217,47 @@ describe("sources", () => {
     expect(j?.labels).toEqual(["Government"]);
   });
   it("drops a listing whose link isn't http or https", () => {
-    expect(parseAdzuna({ id: "1", title: "Cashier", redirect_url: "javascript:alert(1)" }, false)).toBeNull();
+    expect(parseMuse({ id: "1", name: "Cashier", refs: { landing_page: "javascript:alert(1)" } })).toBeNull();
+    expect(parseJobicy({ id: "1", jobTitle: "Cashier", url: "not a link" })).toBeNull();
+  });
+  it("reads The Muse's locations and levels", () => {
+    const j = parseMuse({ id: "1", name: "Marketing Intern", company: { name: "X" }, contents: "<p>Hello &amp; welcome</p>", publication_date: "2026-10-01T00:00:00Z",
+      locations: [{ name: "Chicago, IL" }, { name: "Flexible / Remote" }], levels: [{ name: "Internship" }], refs: { landing_page: "https://u.test/1" } });
+    expect(j?.location).toBe("Chicago, IL; Flexible / Remote");
+    expect(j?.remote).toBe(true);
+    expect(j?.level).toBe("internship");
+    expect(j?.jobType).toBe("internship");
+    expect(j?.description).toBe("Hello & welcome");
+  });
+  it("keeps Remotive's pay as written", () => {
+    const j = parseRemotive({ id: "1", title: "Support Agent", company_name: "X", candidate_required_location: "USA", url: "https://u.test/1", salary: "$20/hour", job_type: "freelance" });
+    expect(j?.salary).toEqual({ text: "$20/hour", estimated: false });
+    expect(j?.jobType).toBe("contract");
+    expect(j?.remote).toBe(true);
+  });
+  it("converts Jobicy's pay to yearly, in US dollars only", () => {
+    const base = { id: "1", jobTitle: "Support Agent", companyName: "X", jobGeo: "USA", url: "https://u.test/1", salaryMin: "3000", salaryPeriod: "monthly" };
+    expect(parseJobicy({ ...base, salaryCurrency: "USD" })?.salary?.min).toBe(36000);
+    expect(parseJobicy({ ...base, salaryCurrency: "EUR" })?.salary).toBeNull();
   });
   it("reads job type from the title before the description", () => {
     expect(detectJobType("Cashier", "This contract covers full time staff")).toBe("full_time");
     expect(detectJobType("Part-Time Cashier", "full time")).toBe("part_time");
   });
-  it("detects remote work", () => {
-    expect(detectRemote("Agent - Remote", "", "")).toBe(true);
-    expect(detectRemote("Agent", "Chicago", "This is a work from home job.")).toBe(true);
-    expect(detectRemote("Agent", "Chicago", "This is not remote.")).toBe(false);
-  });
   it("reports a source with no key as not configured, without revealing anything", async () => {
-    vi.stubEnv("ADZUNA_APP_ID", "");
-    vi.stubEnv("ADZUNA_APP_KEY", "");
-    const { statuses } = await fetchAll(["cashier"], [], request(), [{ ...fake(), name: "Adzuna", needsKey: "ADZUNA_APP_ID", configured: () => false }]);
+    vi.stubEnv("USAJOBS_API_KEY", "");
+    const usaJobs = SOURCES.find((s) => s.name === "USAJOBS");
+    expect(usaJobs?.configured()).toBe(false);
+    const { statuses } = await fetchAll(["cashier"], [], request(), usaJobs ? [usaJobs] : []);
     expect(statuses[0].state).toBe("not_configured");
+    expect(statuses[0].message).not.toContain("USAJOBS_API_KEY=");
+  });
+  it("lists only the supported sources", () => {
+    expect(SOURCES.map((s) => s.name)).toEqual(["USAJOBS", "The Muse", "Remotive", "Jobicy"]);
+  });
+  it("keeps other sources' results when one fails", async () => {
+    const { jobs, statuses } = await fetchAll(["cashier"], [], request(), [fake([], "could not reach the API"), fake([job("Cashier")])]);
+    expect(jobs.map((j) => j.title)).toEqual(["Cashier"]);
+    expect(statuses.map((s) => s.state)).toEqual(["error", "ok"]);
   });
 });
