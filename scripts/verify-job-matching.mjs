@@ -1,60 +1,78 @@
-// Runs the required scenarios through the running app's API and prints the real listings returned.
+// Runs the required searches through the running app's API and reports on the real listings returned.
 // The resumes are made-up test people. Start the app first (npm run dev), then:
 //   node scripts/verify-job-matching.mjs "Chicago, IL"
 
+import robotsParser from "robots-parser";
+
 const BASE = process.env.BASE_URL ?? "http://localhost:3000";
 const location = process.argv[2];
+const AGENT = "WeSearch/0.1 (student project)";
+const LINKS_PER_SEARCH = 4;
 const skills = (...names) => names.map((name) => ({ name, source: "manual" }));
 const person = (extra) => ({ skills: [], experience: [], education: [], certifications: [], isStudent: false, ...extra });
 
-const FAST_FOOD = person({
-  skills: skills("cash handling", "customer service", "food preparation", "teamwork"),
-  experience: [{ title: "Crew Member", employer: "McDonald's", years: 2 }],
-});
-const STUDENT = person({
-  skills: skills("communication", "microsoft office", "research"),
-  isStudent: true,
-  education: [{ level: "bachelor", inProgress: true }],
-});
-const PROGRAMMER = person({
-  skills: skills("python", "sql", "git"),
-  experience: [{ title: "Software Developer", years: 4 }],
-});
+const FAST_FOOD = person({ skills: skills("cash handling", "customer service", "food preparation", "teamwork"), experience: [{ title: "Crew Member", employer: "McDonald's", years: 2 }] });
+const STUDENT = person({ skills: skills("communication", "microsoft office", "research"), isStudent: true, education: [{ level: "bachelor", inProgress: true }] });
+const PROGRAMMER = person({ skills: skills("python", "sql", "git"), experience: [{ title: "Software Developer", years: 4 }] });
 
-const SCENARIOS = [
-  ["1. Fast-food worker, no category chosen", { resume: FAST_FOOD }, ["Fast Food", "Retail", "Hospitality", "Customer Service"]],
-  ["2. Student, no work experience, no category chosen", { resume: STUDENT }, ["Internships"]],
-  ["3. Programmer selects Fast Food", { resume: PROGRAMMER, categories: ["Fast Food"] }, ["Fast Food"]],
-];
-const EXTRAS = [
-  ["Keyword: McDonald's", { resume: PROGRAMMER, keywords: "McDonald's" }],
-  ["Keywords: cashier, part-time", { resume: FAST_FOOD, keywords: "cashier, part-time" }],
-  ...["Fast Food", "Retail", "Warehouse", "Customer Service", "Internships"].map((c) => [`Category: ${c}`, { resume: FAST_FOOD, categories: [c] }]),
+const SEARCHES = [
+  ["1. Fast Food / Crew Member", { resume: FAST_FOOD, categories: ["Fast Food"], keywords: "Crew Member" }],
+  ["1b. Fast Food, any title", { resume: PROGRAMMER, categories: ["Fast Food"] }],
+  ["2. Retail / Cashier", { resume: FAST_FOOD, categories: ["Retail"], keywords: "Cashier" }],
+  ["2b. Retail, any title", { resume: FAST_FOOD, categories: ["Retail"] }],
+  ["3. Warehouse / Package Handler", { resume: FAST_FOOD, categories: ["Warehouse"], keywords: "Package Handler" }],
+  ["3b. Warehouse, any title", { resume: FAST_FOOD, categories: ["Warehouse"] }],
+  ["4. College Internships", { resume: STUDENT, categories: ["Internships"] }],
+  ["5. Entry-Level Customer Service", { resume: STUDENT, categories: ["Customer Service"], keywords: "Entry-Level" }],
+  ["5b. Customer Service, any level", { resume: FAST_FOOD, categories: ["Customer Service"] }],
+  ["Resume matches: fast-food worker", { resume: FAST_FOOD }],
+  ["Resume matches: student, no work history", { resume: STUDENT }],
+  ["Explore, no resume: Warehouse", { categories: ["Warehouse"] }],
+  ["Keyword: McDonald's", { keywords: "McDonald's" }],
+  ["Empty search on purpose", { keywords: "zzzz-no-such-job" }],
 ];
 
-async function run(label, body, wanted = []) {
-  const response = await fetch(`${BASE}/api/jobs/search`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ location, ...body }),
-  });
-  const out = await response.json();
-  console.log(`\n=== ${label} (HTTP ${response.status})`);
-  for (const s of out.sources) console.log(`  [${s.state}] ${s.name}: ${s.message}`);
-  console.log(`  total ${out.total} | searched: ${out.searchTerms.join(", ")}`);
-  if (out.message) console.log(`  message: ${out.message}`);
-  for (const { job, compatibility } of out.matches.slice(0, 6)) {
-    console.log(`  ${String(compatibility?.score ?? "-").padStart(3)}%  ${job.title.slice(0, 46)} | ${(job.employer ?? "?").slice(0, 22)} | ${(job.location ?? "?").slice(0, 22)} | ${(job.postedAt ?? "no date").slice(0, 10)} | ${job.applyUrl.slice(0, 60)}`);
+const robotsCache = new Map();
+async function allowed(url) {
+  const { origin } = new URL(url);
+  if (!robotsCache.has(origin)) {
+    const response = await fetch(`${origin}/robots.txt`, { headers: { "User-Agent": AGENT }, signal: AbortSignal.timeout(15000) }).catch(() => null);
+    robotsCache.set(origin, robotsParser(`${origin}/robots.txt`, response?.ok ? await response.text() : ""));
   }
-  const counts = wanted.map((c) => [c, out.matches.filter((m) => m.job.categories.includes(c)).length]);
-  if (wanted.length) console.log("  by category:", Object.fromEntries(counts));
-  const missing = counts.filter(([, n]) => n === 0).map(([c]) => c);
-  const met = out.matches.length > 0 && missing.length === 0;
-  if (wanted.length) console.log(`  --> ${met ? "MET" : `NOT MET${missing.length ? ` (no real listings for: ${missing.join(", ")})` : ""}`}`);
-  return met;
+  return robotsCache.get(origin).isAllowed(url, "WeSearch") !== false;
 }
 
-const results = [];
-for (const [label, body, wanted] of SCENARIOS) results.push(await run(label, body, wanted));
-for (const [label, body] of EXTRAS) await run(label, body);
-console.log(`\nScenarios met: ${results.filter(Boolean).length} of ${results.length}`);
+async function checkLink(url) {
+  if (!(await allowed(url))) return "not checked (robots.txt)";
+  try {
+    await new Promise((resolve) => setTimeout(resolve, 1100));
+    const response = await fetch(url, { headers: { "User-Agent": AGENT }, redirect: "follow", signal: AbortSignal.timeout(15000) });
+    await response.body?.cancel();
+    return String(response.status);
+  } catch {
+    return "failed";
+  }
+}
+
+for (const [label, body] of SEARCHES) {
+  const response = await fetch(`${BASE}/api/jobs/search`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ location, ...body }) });
+  const out = await response.json();
+  console.log(`\n=== ${label} (HTTP ${response.status})`);
+  for (const s of out.sources) if (s.state !== "ok" || s.count) console.log(`  [${s.state}] ${s.name}: ${s.message}`);
+  const scored = out.matches.filter((m) => m.compatibility).length;
+  const sites = [...new Set(out.matches.flatMap((m) => m.job.sources))];
+  const employers = [...new Set(out.matches.map((m) => m.job.employer))];
+  const located = out.matches.filter((m) => m.job.location).length;
+  console.log(`  found ${out.total} | scored ${scored} | with location ${located} | sites: ${sites.join(", ") || "none"} | employers: ${employers.length}`);
+  const keys = out.matches.map((m) => [m.job.title, m.job.employer, m.job.location].join("|"));
+  console.log(`  duplicates in results: ${keys.length - new Set(keys).size} | older listings hidden: ${out.notes.some((n) => n.includes("older"))}`);
+  if (location) console.log(`  in or remote from ${location}: ${out.matches.filter((m) => m.job.remote || (m.job.location ?? "").includes(location.split(",")[0])).length} of ${out.matches.length}`);
+  if (out.message) console.log(`  message: ${out.message}`);
+  for (const note of out.notes) console.log(`  note: ${note}`);
+  for (const { job, compatibility } of out.matches.slice(0, 5)) {
+    console.log(`  ${String(compatibility?.score ?? "-").padStart(3)}%  ${job.title.slice(0, 40)} | ${(job.employer ?? "?").slice(0, 18)} | ${(job.location ?? "?").slice(0, 26)} | ${(job.postedAt ?? "no date").slice(0, 10)} | ${job.sources[0].slice(0, 10)}`);
+  }
+  const statuses = [];
+  for (const { job } of out.matches.slice(0, LINKS_PER_SEARCH)) statuses.push(await checkLink(job.applyUrl));
+  if (statuses.length) console.log(`  apply links: ${statuses.join(", ")}`);
+}

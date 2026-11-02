@@ -8,7 +8,10 @@
         "drive thru",
         "fry cook",
         "burger",
-        "pizza maker"
+        "pizza maker",
+        "food service worker",
+        "kitchen staff",
+        "kitchen team member"
       ],
       "queries": [
         "fast food",
@@ -17,9 +20,12 @@
       ],
       "titlesToTry": [
         "Crew Member",
-        "Fast Food Team Member",
-        "Drive-Thru Attendant",
-        "Shift Leader"
+        "Team Member",
+        "Cashier",
+        "Food Service Worker",
+        "Kitchen Staff",
+        "Shift Leader",
+        "Drive-Thru Attendant"
       ],
       "employers": [
         "mcdonalds",
@@ -51,7 +57,13 @@
         "panera",
         "starbucks",
         "hardees",
-        "carls jr"
+        "carls jr",
+        "sweetgreen",
+        "cava",
+        "tender greens",
+        "just salad",
+        "honeygrow",
+        "insomnia cookies"
       ],
       "contextTitles": {
         "titles": [
@@ -59,7 +71,10 @@
           "team member",
           "crew",
           "shift leader",
-          "shift manager"
+          "shift manager",
+          "cashier",
+          "kitchen",
+          "food service"
         ],
         "context": [
           "restaurant",
@@ -92,7 +107,10 @@
         "Cashier",
         "Retail Sales Associate",
         "Stock Associate",
-        "Front End Associate"
+        "Front End Associate",
+        "Sales Associate",
+        "Store Associate",
+        "Stocker"
       ],
       "exclude": [
         "enterprise",
@@ -179,7 +197,14 @@
         "inventory associate",
         "order selector",
         "loader",
-        "unloader"
+        "unloader",
+        "package handler",
+        "warehouse worker",
+        "warehouse team member",
+        "warehouse operator",
+        "fulfillment specialist",
+        "fulfillment center",
+        "fulfillment team"
       ],
       "queries": [
         "warehouse associate",
@@ -187,9 +212,18 @@
         "material handler"
       ],
       "titlesToTry": [
+        "Package Handler",
         "Warehouse Associate",
-        "Picker Packer",
+        "Picker",
+        "Packer",
         "Material Handler"
+      ],
+      "exclude": [
+        "pharmacist",
+        "account manager",
+        "sales",
+        "software",
+        "engineer"
       ]
     },
     "Customer Service": {
@@ -222,7 +256,11 @@
         "co op",
         "apprentice",
         "apprenticeship",
-        "summer analyst"
+        "summer analyst",
+        "student intern",
+        "research intern",
+        "summer intern",
+        "undergraduate intern"
       ],
       "queries": [
         "internship",
@@ -230,9 +268,10 @@
         "student intern"
       ],
       "titlesToTry": [
-        "Intern",
-        "Summer Intern",
         "Student Intern",
+        "Research Intern",
+        "Summer Intern",
+        "Undergraduate Intern",
         "Apprentice"
       ],
       "exclude": [
@@ -451,7 +490,8 @@
         "guest service",
         "bellhop",
         "resort",
-        "front desk"
+        "front desk",
+        "guest experience"
       ],
       "queries": [
         "hotel front desk",
@@ -502,51 +542,30 @@
         "program",
         "service delivery"
       ]
+    },
+    "Entry-Level": {
+      "titles": [
+        "entry level",
+        "junior",
+        "trainee",
+        "associate i"
+      ],
+      "queries": [
+        "entry level"
+      ],
+      "titlesToTry": [
+        "Entry-Level Associate",
+        "Trainee",
+        "Junior Associate"
+      ],
+      "exclude": [
+        "senior",
+        "manager",
+        "director",
+        "principal",
+        "vice president"
+      ]
     }
-  },
-  "museCategories": {
-    "Retail": [
-      "Retail"
-    ],
-    "Customer Service": [
-      "Customer Service"
-    ],
-    "Warehouse": [
-      "Manufacturing and Warehouse",
-      "Transportation and Logistics"
-    ],
-    "Office": [
-      "Administration and Office"
-    ],
-    "Healthcare": [
-      "Healthcare"
-    ],
-    "Security": [
-      "Protective Services"
-    ],
-    "Skilled Trades": [
-      "Installation, Maintenance, and Repairs",
-      "Construction"
-    ],
-    "Technology": [
-      "Software Engineering"
-    ],
-    "Education": [
-      "Education"
-    ],
-    "Delivery": [
-      "Transportation and Logistics"
-    ],
-    "Fast Food": [
-      "Food and Hospitality Services"
-    ],
-    "Restaurants": [
-      "Food and Hospitality Services"
-    ],
-    "Hospitality": [
-      "Food and Hospitality Services",
-      "Entertainment and Travel Services"
-    ]
   },
   "transferableCategories": {
     "Fast Food": [
@@ -620,10 +639,16 @@
       "Office",
       "Retail",
       "Customer Service"
+    ],
+    "Entry-Level": [
+      "Retail",
+      "Customer Service",
+      "Office"
     ]
   },
   "studentCategories": [
     "Internships",
+    "Entry-Level",
     "Retail",
     "Fast Food",
     "Customer Service",
@@ -635,7 +660,11 @@
       "customer support",
       "guest service",
       "serving customers",
-      "customer facing"
+      "customer facing",
+      "served customers",
+      "serve customers",
+      "helping customers",
+      "assisted customers"
     ],
     "cash handling": [
       "cash handling",
@@ -1065,6 +1094,11 @@
       "time management",
       "customer service",
       "physical work"
+    ],
+    "Entry-Level": [
+      "communication",
+      "teamwork",
+      "time management"
     ]
   },
   "relatedKeywords": {
@@ -1134,6 +1168,42 @@
     "forklift": [
       "forklift operator",
       "material handler"
+    ],
+    "crew member": [
+      "crew",
+      "team member",
+      "kitchen staff",
+      "food service worker",
+      "shift leader",
+      "shift lead"
+    ],
+    "team member": [
+      "crew member",
+      "associate"
+    ],
+    "warehouse associate": [
+      "warehouse worker",
+      "warehouse team member",
+      "package handler",
+      "picker",
+      "packer",
+      "fulfillment associate"
+    ],
+    "package handler": [
+      "warehouse associate",
+      "material handler",
+      "picker",
+      "packer"
+    ],
+    "sales associate": [
+      "store associate",
+      "retail associate",
+      "cashier"
+    ],
+    "delivery driver": [
+      "courier",
+      "driver",
+      "delivery courier"
     ]
   },
   "keywordCategoryAliases": {
@@ -1157,7 +1227,9 @@
     "intern": "Internships",
     "hotel": "Hospitality",
     "warehouses": "Warehouse",
-    "qsr": "Fast Food"
+    "qsr": "Fast Food",
+    "entry level": "Entry-Level",
+    "entrylevel": "Entry-Level"
   },
   "jobTypeKeywords": {
     "part time": "part_time",
@@ -1168,15 +1240,11 @@
   },
   "entryLevelTerms": [
     "entry level",
-    "no experience",
     "no experience required",
     "no experience necessary",
-    "will train",
-    "paid training",
-    "training provided",
-    "on the job training",
-    "first job",
-    "beginner"
+    "no prior experience",
+    "no experience needed",
+    "will train"
   ],
   "seniorTitleTerms": [
     "senior",
@@ -1200,6 +1268,87 @@
     "counsel",
     "vice president",
     "data scientist",
-    "architect"
-  ]
+    "architect",
+    "designer",
+    "marketing",
+    "finance",
+    "recruiter",
+    "product manager",
+    "director",
+    "payroll",
+    "controller",
+    "brand",
+    "copywriter",
+    "merchandising coordinator",
+    "tax",
+    "legal",
+    "business partner",
+    "loyalty",
+    "crm",
+    "data",
+    "product",
+    "human resources",
+    "talent",
+    "communications",
+    "strategy",
+    "procurement",
+    "analytics",
+    "executive",
+    "accounting",
+    "insurance",
+    "research",
+    "partnerships",
+    "growth",
+    "content",
+    "social media",
+    "operations research"
+  ],
+  "museCategories": {
+    "Retail": [
+      "Retail"
+    ],
+    "Customer Service": [
+      "Customer Service"
+    ],
+    "Warehouse": [
+      "Manufacturing and Warehouse",
+      "Transportation and Logistics"
+    ],
+    "Office": [
+      "Administration and Office"
+    ],
+    "Healthcare": [
+      "Healthcare"
+    ],
+    "Security": [
+      "Protective Services"
+    ],
+    "Skilled Trades": [
+      "Installation, Maintenance, and Repairs",
+      "Construction"
+    ],
+    "Technology": [
+      "Software Engineering"
+    ],
+    "Education": [
+      "Education"
+    ],
+    "Delivery": [
+      "Transportation and Logistics"
+    ],
+    "Fast Food": [
+      "Food and Hospitality Services"
+    ],
+    "Restaurants": [
+      "Food and Hospitality Services"
+    ],
+    "Hospitality": [
+      "Food and Hospitality Services",
+      "Entertainment and Travel Services"
+    ],
+    "Entry-Level": [
+      "Retail",
+      "Customer Service"
+    ]
+  }
 }

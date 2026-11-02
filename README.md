@@ -2,8 +2,6 @@
 
 An AI resume-to-job matching app. Upload a PDF resume, review the skills it finds, search real job listings by keyword or category, and see an explained compatibility score with a direct link to apply.
 
-This branch is the shared foundation. The features below aren't built yet.
-
 ## Setup
 
 You need [Node.js](https://nodejs.org) version 20.9 or newer.
@@ -16,7 +14,7 @@ npm install
 npm run dev
 ```
 
-Then open http://localhost:3000. To use API keys, copy `.env.example` to `.env.local` and fill it in. Git ignores that file, so keys stay on your computer.
+Then open http://localhost:3000. No API keys or accounts are needed.
 
 Other useful commands:
 
@@ -58,3 +56,4 @@ When a feature works, open a pull request into `BigDillo`. Run `npm run build` f
 - Show only real listings. If a job API fails or returns nothing, say so, and never use sample data in its place.
 - Never make up qualifications or skills.
 - Never commit API keys.
+- Only read sources that allow automated access. Respect `robots.txt`, and never work around a block.

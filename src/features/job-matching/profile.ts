@@ -1,5 +1,5 @@
-import type { Education, JobCategory, Resume } from "@/types";
-import { CATEGORIES, CATEGORY_NAMES, SKILLS, STUDENT_CATEGORIES, TRANSFERABLE_CATEGORIES } from "./taxonomy";
+import type { Education, JobCategory, Resume, TransferableSkill } from "@/types";
+import { CATEGORIES, CATEGORY_NAMES, SKILLS, STUDENT_CATEGORIES, TRANSFERABLE_CATEGORIES, TRANSFERABLE_SKILLS } from "./taxonomy";
 import { hasAny, norm } from "./text";
 
 /** A resume reduced to what matching needs. */
@@ -10,6 +10,8 @@ export interface MatchProfile {
   workCategories: JobCategory[];
   hasExperience: boolean;
   yearsExperience: number;
+  roles: { title: string; categories: JobCategory[] }[];
+  projects: string[];
 }
 
 export function canonicalSkills(text: string | null | undefined): string[] {
@@ -43,7 +45,10 @@ export function buildProfile(resume: Resume): MatchProfile {
   for (const job of experience) {
     canonicalSkills(`${job.title} ${job.description ?? ""}`).forEach((name) => skills.add(name));
   }
+  for (const project of resume.projects ?? []) canonicalSkills(project).forEach((name) => skills.add(name));
   return {
+    roles: experience.map((job) => ({ title: job.employer ? `${job.title}, ${job.employer}` : job.title, categories: roleCategories(job.title, job.employer) })),
+    projects: resume.projects ?? [],
     skills: [...skills].sort(),
     certifications: (resume.certifications ?? []).map(norm),
     education: resume.education ?? [],
@@ -60,4 +65,12 @@ export function suggestedCategories(profile: MatchProfile): JobCategory[] {
   for (const category of profile.workCategories) suggested.push(...TRANSFERABLE_CATEGORIES[category]);
   if (!profile.hasExperience) suggested.push(...STUDENT_CATEGORIES);
   return [...new Set(suggested)];
+}
+
+/** What the skills on a resume also count toward, for showing the applicant. */
+export function transferableSkills(profile: MatchProfile): TransferableSkill[] {
+  return profile.skills.flatMap((have) =>
+    Object.entries(TRANSFERABLE_SKILLS[have] ?? {})
+      .filter(([target]) => !profile.skills.includes(target))
+      .map(([countsToward, explanation]) => ({ have, countsToward, explanation })));
 }

@@ -1,3 +1,4 @@
+import { allowRequest } from "@/features/job-matching/rate-limit";
 import { searchJobs } from "@/features/job-matching/search";
 import { CATEGORY_NAMES } from "@/features/job-matching/taxonomy";
 import type { JobCategory, JobSearchRequest, JobType, Resume } from "@/types";
@@ -29,6 +30,7 @@ function toRequest(body: Record<string, unknown>): JobSearchRequest {
 
 /** Body: the fields of JobSearchRequest, plus an optional `resume`. Returns a JobSearchResponse. */
 export async function POST(httpRequest: Request) {
+  if (!allowRequest(httpRequest)) return Response.json({ error: "Too many searches. Wait a minute and try again." }, { status: 429 });
   const text = await httpRequest.text();
   if (text.length > MAX_BODY_BYTES) return Response.json({ error: "Request too large." }, { status: 413 });
   let body: unknown;

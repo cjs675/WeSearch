@@ -4,15 +4,24 @@ import type { JobCategory, JobSearchRequest, Resume } from "@/types";
 import { buildProfile, suggestedCategories } from "./profile";
 import { scoreJob } from "./scoring";
 import { applyFilters, dedupe, generateTerms, jobCategories, keywordTier, searchJobs } from "./search";
-import { detectJobType, fetchAll, parseJobicy, parseMuse, parseRemotive, parseUsaJobs, SOURCES } from "./sources";
+import { fetchAll, SOURCES } from "./sources";
+import { getJson } from "./sources/http";
+import { parseAshby } from "./sources/ashby";
+import { type Employer, employerSource, selectEmployers } from "./sources/employers";
+import { parseGreenhouse } from "./sources/greenhouse";
+import { detectJobType, detectRemote, isUsLocation, parseSalaryText } from "./sources/job";
+import { parseJobicy } from "./sources/jobicy";
+import { parseLever } from "./sources/lever";
+import { parseMuse } from "./sources/muse";
 import { type JobSource, type SourceJob, SourceUnavailable } from "./sources/types";
 import { stripHtml } from "./text";
+import { analyzeResumeText, parseResumeText } from "../resume-analysis/parser";
 
 function job(title: string, employer = "Acme", description = "", extra: Partial<SourceJob> = {}): SourceJob {
   const base: SourceJob = {
     id: `test:${title}:${employer}`, sources: ["test"], title, employer, location: "Chicago, IL", remote: false, description,
     descriptionIsPartial: false, applyUrl: `https://example.test/${encodeURIComponent(title + employer)}`, postedAt: null, salary: null,
-    jobType: null, categories: [], level: null, labels: [], locationCheckedByApi: false, ...extra,
+    jobType: null, categories: [], level: null, labels: [], verifiedOpen: false, ...extra,
   };
   return { ...base, categories: jobCategories(base) };
 }
@@ -27,10 +36,10 @@ const PROGRAMMER = resume(["python", "sql"], { experience: [{ title: "Software D
 
 function fake(jobs: SourceJob[] = [], error?: string): JobSource {
   return {
-    name: "Fake", needsKey: null, configured: () => true,
+    name: "Fake",
     fetch: async () => {
       if (error) throw new SourceUnavailable(error);
-      return jobs.map((j) => ({ ...j }));
+      return { jobs: jobs.map((j) => ({ ...j })) };
     },
   };
 }
@@ -89,6 +98,11 @@ describe("scoring", () => {
       expect(s.score).toBeGreaterThanOrEqual(0);
       expect(s.score).toBeLessThanOrEqual(100);
     }
+  });
+  it("ranks a step up below a same-level job in the same field", () => {
+    const crew = job("Shift Leader", "Wendy's");
+    const manager = job("District Manager", "Wendy's");
+    expect(score(crew, FAST_FOOD).score).toBeGreaterThan(score(manager, FAST_FOOD).score);
   });
   it("recognizes transferable skills", () => {
     const s = score(job("Cashier", "Acme", "Use the POS register and sell products."), FAST_FOOD);
@@ -154,6 +168,17 @@ describe("filters", () => {
     expect(filter(jobs, { remote: "only" })).toEqual(["A"]);
     expect(filter(jobs, { jobType: "full_time" })).toEqual(["B"]);
   });
+  it("gives listings on live employer boards up to a year", async () => {
+    const months = (n: number) => new Date(Date.now() - n * 30 * 86_400_000).toISOString();
+    const jobs = [job("Retail A", "Acme", "", { postedAt: months(6), verifiedOpen: true }), job("Retail B", "Acme", "", { postedAt: months(20), verifiedOpen: true }), job("Retail C", "Acme", "", { postedAt: months(6) })];
+    expect(titles(await searchJobs(request({ categories: ["Retail"] }), null, [fake(jobs)]))).toEqual(["Retail A"]);
+  });
+  it("matches a state code and treats a distance as the same state", () => {
+    const jobs = [job("A", "Acme", "", { location: "Peoria, IL" }), job("B", "Acme", "", { location: "Boston, MA" })];
+    expect(filter(jobs, { location: "IL" })).toEqual(["A"]);
+    expect(filter(jobs, { location: "Chicago, IL" })).toEqual([]);
+    expect(filter(jobs, { location: "Chicago, IL", distanceMiles: 25 })).toEqual(["A"]);
+  });
   it("hides old listings by default", async () => {
     const old = job("Retail Associate", "Acme", "", { postedAt: "2020-01-01T00:00:00Z" });
     const out = await searchJobs(request({ categories: ["Retail"] }), null, [fake([old])]);
@@ -194,7 +219,7 @@ describe("required behavior", () => {
   });
   it("browses the category a keyword points to, without loosening the match", async () => {
     let browsed: JobCategory[] = [];
-    const source: JobSource = { ...fake(), fetch: async (_q, categories) => { browsed = categories; return [job("Cashier"), job("Stock Associate")]; } };
+    const source: JobSource = { ...fake(), fetch: async (categories) => { browsed = categories; return { jobs: [job("Cashier"), job("Stock Associate")] }; } };
     const out = await searchJobs(request({ keywords: ["cashier"] }), null, [source]);
     expect(browsed).toContain("Retail");
     expect(titles(out)).toEqual(["Cashier"]);
@@ -202,23 +227,52 @@ describe("required behavior", () => {
   it("says so when a source has nothing", async () => {
     const out = await searchJobs(request({ categories: ["Retail"] }), null, [fake()]);
     expect(out.matches).toEqual([]);
-    expect(out.message).toContain("none of their listings");
+    expect(out.message).toContain("had no listings");
   });
 });
 
+const ACME: Employer = { name: "Acme Foods", platform: "greenhouse", token: "acmefoods", categories: ["Fast Food"] };
+
 describe("sources", () => {
-  afterEach(() => vi.unstubAllEnvs());
-  // Field mapping against documented shapes. These don't prove the live APIs work.
-  it("converts USAJOBS hourly pay to yearly", () => {
-    const j = parseUsaJobs({ PositionID: "1", PositionTitle: "Clerk", OrganizationName: "VA", ApplyURI: ["https://u.test/1"],
-      PositionRemuneration: [{ MinimumRange: "20", MaximumRange: "25", RateIntervalCode: "PH" }], PositionSchedule: [{ Name: "Part-Time" }] }, false);
-    expect(j?.salary?.min).toBe(41600);
+  // Field mapping against real response shapes. Live behavior is checked by scripts/verify-job-matching.mjs.
+  it("reads a Greenhouse listing", () => {
+    const j = parseGreenhouse({ id: 1, title: "Team Member", location: { name: "Liberty Township, OH" }, absolute_url: "https://careers.test/1", first_published: "2026-10-16T19:46:24-04:00",
+      content: "&lt;p&gt;Earn $18 - $22 per hour. Must have a food handler card.&lt;/p&gt;", metadata: [{ name: "TH: Employment Type", value: "Part-time" }] }, ACME);
+    expect(j?.employer).toBe("Acme Foods");
     expect(j?.jobType).toBe("part_time");
-    expect(j?.labels).toEqual(["Government"]);
+    expect(j?.salary?.min).toBe(37440);
+    expect(j?.verifiedOpen).toBe(true);
+    expect(j?.description).not.toContain("<p>");
   });
-  it("drops a listing whose link isn't http or https", () => {
-    expect(parseMuse({ id: "1", name: "Cashier", refs: { landing_page: "javascript:alert(1)" } })).toBeNull();
-    expect(parseJobicy({ id: "1", jobTitle: "Cashier", url: "not a link" })).toBeNull();
+  it("drops a Greenhouse listing past its deadline", () => {
+    expect(parseGreenhouse({ id: 1, title: "Cook", absolute_url: "https://careers.test/1", application_deadline: "2020-01-01" }, ACME)).toBeNull();
+  });
+  it("doesn't give a restaurant's category to its head-office jobs", () => {
+    expect(job("Assistant Restaurant Manager", "sweetgreen").categories).toContain("Fast Food");
+    for (const title of ["Tax Manager", "Senior Manager, Loyalty & CRM", "Executive Business Partner"]) expect(job(title, "sweetgreen").categories).not.toContain("Fast Food");
+  });
+  it("skips resume-collecting postings that aren't openings", () => {
+    expect(parseGreenhouse({ id: 1, title: "General Application", absolute_url: "https://careers.test/1" }, ACME)).toBeNull();
+  });
+  it("reads a Lever listing", () => {
+    const j = parseLever({ id: "a", text: "Package Handler", categories: { location: "Cherry Hill, NJ", commitment: "Part Time" }, hostedUrl: "https://jobs.lever.co/x/a", createdAt: 1789052684716, descriptionPlain: "Lift boxes.", workplaceType: "onsite",
+      salaryRange: { min: 40000, max: 50000, currency: "USD", interval: "per-year-salary" } }, ACME);
+    expect(j?.jobType).toBe("part_time");
+    expect(j?.location).toBe("Cherry Hill, NJ");
+    expect(j?.postedAt).toContain("2026");
+    expect(j?.salary).toEqual({ min: 40000, max: 50000, estimated: false });
+  });
+  it("keeps Lever's hourly pay as hourly", () => {
+    const j = parseLever({ id: "a", text: "Cookie Crew", hostedUrl: "https://jobs.lever.co/x/a", salaryRange: { min: 18.25, max: 18.5, currency: "USD", interval: "per-hour-wage" } }, ACME);
+    expect(j?.salary?.text).toBe("$18.25 to $18.5 an hour");
+    expect(j?.salary?.min).toBe(37960);
+  });
+  it("reads an Ashby listing and skips unlisted ones", () => {
+    const base = { id: "a", title: "Support Agent", location: "New York, NY", applyUrl: "https://jobs.ashbyhq.com/x/a", employmentType: "Intern", isRemote: false, compensation: { scrapeableCompensationSalarySummary: "$50K - $60K" } };
+    const j = parseAshby(base, ACME);
+    expect(j?.jobType).toBe("internship");
+    expect(j?.salary?.max).toBe(60000);
+    expect(parseAshby({ ...base, isListed: false }, ACME)).toBeNull();
   });
   it("reads The Muse's locations and levels", () => {
     const j = parseMuse({ id: "1", name: "Marketing Intern", company: { name: "X" }, contents: "<p>Hello &amp; welcome</p>", publication_date: "2026-10-01T00:00:00Z",
@@ -226,38 +280,115 @@ describe("sources", () => {
     expect(j?.location).toBe("Chicago, IL; Flexible / Remote");
     expect(j?.remote).toBe(true);
     expect(j?.level).toBe("internship");
-    expect(j?.jobType).toBe("internship");
     expect(j?.description).toBe("Hello & welcome");
-  });
-  it("keeps Remotive's pay as written", () => {
-    const j = parseRemotive({ id: "1", title: "Support Agent", company_name: "X", candidate_required_location: "USA", url: "https://u.test/1", salary: "$20/hour", job_type: "freelance" });
-    expect(j?.salary).toEqual({ text: "$20/hour", estimated: false });
-    expect(j?.jobType).toBe("contract");
-    expect(j?.remote).toBe(true);
   });
   it("converts Jobicy's pay to yearly, in US dollars only", () => {
     const base = { id: "1", jobTitle: "Support Agent", companyName: "X", jobGeo: "USA", url: "https://u.test/1", salaryMin: "3000", salaryPeriod: "monthly" };
     expect(parseJobicy({ ...base, salaryCurrency: "USD" })?.salary?.min).toBe(36000);
     expect(parseJobicy({ ...base, salaryCurrency: "EUR" })?.salary).toBeNull();
   });
+  it("drops a listing whose link isn't http or https", () => {
+    expect(parseMuse({ id: "1", name: "Cashier", refs: { landing_page: "javascript:alert(1)" } })).toBeNull();
+    expect(parseJobicy({ id: "1", jobTitle: "Cashier", url: "not a link" })).toBeNull();
+  });
+  it("reads stated pay and leaves unclear pay out", () => {
+    expect(parseSalaryText("$18 - $22 per hour")?.max).toBe(45760);
+    expect(parseSalaryText("$211.4K - $290.6K")?.min).toBeCloseTo(211400);
+    expect(parseSalaryText("$500 sign-on bonus")).toBeNull();
+    expect(parseSalaryText("Competitive pay")).toBeNull();
+  });
+  it("recognizes US locations", () => {
+    for (const place of ["Liberty Township, OH", "50 Washington St, Norwalk, CT 06854", "United States - Remote", "Remote", "New York"]) expect(isUsLocation(place)).toBe(true);
+    for (const place of ["Toronto, ON", "Tokyo, Japan", "Remote (Canada)", "London, UK", null]) expect(isUsLocation(place)).toBe(false);
+  });
   it("reads job type from the title before the description", () => {
     expect(detectJobType("Cashier", "This contract covers full time staff")).toBe("full_time");
     expect(detectJobType("Part-Time Cashier", "full time")).toBe("part_time");
   });
-  it("reports a source with no key as not configured, without revealing anything", async () => {
-    vi.stubEnv("USAJOBS_API_KEY", "");
-    const usaJobs = SOURCES.find((s) => s.name === "USAJOBS");
-    expect(usaJobs?.configured()).toBe(false);
-    const { statuses } = await fetchAll(["cashier"], [], request(), usaJobs ? [usaJobs] : []);
-    expect(statuses[0].state).toBe("not_configured");
-    expect(statuses[0].message).not.toContain("USAJOBS_API_KEY=");
+  it("detects remote work", () => {
+    expect(detectRemote("Agent - Remote", "", "")).toBe(true);
+    expect(detectRemote("Agent", "Chicago", "This is not remote.")).toBe(false);
   });
-  it("lists only the supported sources", () => {
-    expect(SOURCES.map((s) => s.name)).toEqual(["USAJOBS", "The Muse", "Remotive", "Jobicy"]);
+  it("uses only sources that allow automated access", () => {
+    expect(SOURCES.map((s) => s.name)).toEqual(["Greenhouse employer boards", "Lever employer boards", "Ashby employer boards", "The Muse", "Jobicy"]);
   });
   it("keeps other sources' results when one fails", async () => {
-    const { jobs, statuses } = await fetchAll(["cashier"], [], request(), [fake([], "could not reach the API"), fake([job("Cashier")])]);
+    const { jobs, statuses } = await fetchAll([], request(), [fake([], "could not reach it"), fake([job("Cashier")])]);
     expect(jobs.map((j) => j.title)).toEqual(["Cashier"]);
     expect(statuses.map((s) => s.state)).toEqual(["error", "ok"]);
+  });
+  it("chooses boards by company, then category, then all for a general keyword", () => {
+    const other: Employer = { ...ACME, name: "Other Retail", token: "otherretail", categories: ["Retail"] };
+    const employers = [ACME, other];
+    expect(selectEmployers(employers, [], request({ keywords: ["Acme Foods"] }))).toEqual([ACME]);
+    expect(selectEmployers(employers, ["Retail"], request())).toEqual([other]);
+    expect(selectEmployers(employers, [], request({ keywords: ["cashier"] }))).toEqual(employers);
+  });
+  it("reports a board source as unavailable only when no board answers", async () => {
+    const down = employerSource("Test", "greenhouse", async () => { throw new SourceUnavailable("down"); });
+    await expect(down.fetch(["Fast Food"], request())).rejects.toThrow("none of its employer boards");
+    const partial = employerSource("Test", "greenhouse", async (e) => {
+      if (e.token !== "sweetgreen") throw new SourceUnavailable("down");
+      return [job("Team Member")];
+    });
+    const result = await partial.fetch(["Retail", "Fast Food"], request());
+    expect(result.jobs).toHaveLength(1);
+    expect(result.note).toContain("of");
+  });
+});
+
+describe("polite fetching", () => {
+  afterEach(() => vi.unstubAllGlobals());
+  const stub = (robots: () => Response) => {
+    const calls: string[] = [];
+    vi.stubGlobal("fetch", async (url: string) => {
+      calls.push(url);
+      return url.endsWith("/robots.txt") ? robots() : Response.json({ ok: true });
+    });
+    return calls;
+  };
+  const host = () => `https://t${Date.now()}${Math.random().toString(36).slice(2)}.test`;
+  it("doesn't request a page robots.txt blocks", async () => {
+    const calls = stub(() => new Response("User-agent: *\nDisallow: /"));
+    await expect(getJson(`${host()}/jobs`)).rejects.toThrow("robots.txt");
+    expect(calls).toHaveLength(1);
+  });
+  it("allows a page robots.txt permits, or when the site publishes no rules", async () => {
+    stub(() => new Response("User-agent: *\nDisallow: /private"));
+    await expect(getJson(`${host()}/jobs`)).resolves.toEqual({ ok: true });
+    stub(() => new Response("Unauthorized", { status: 401 }));
+    await expect(getJson(`${host()}/jobs`)).resolves.toEqual({ ok: true });
+  });
+  it("skips a source when robots.txt can't be checked", async () => {
+    stub(() => new Response("oops", { status: 503 }));
+    await expect(getJson(`${host()}/jobs`)).rejects.toThrow("couldn't be checked");
+  });
+});
+
+describe("resume reading", () => {
+  const TEXT = ["Experience", "Crew Member, McDonald's 2022-2024", "- Handled cash and served customers", "Education", "Bachelor of Science in Biology", "Lincoln University, expected 2027", "Skills", "Teamwork, Spanish, Basket Weaving", "Projects", "Inventory tracker in Python", "Certifications", "CPR"].join("\n");
+  it("extracts each section", () => {
+    const r = parseResumeText(TEXT);
+    expect(r.experience[0]).toMatchObject({ title: "Crew Member", employer: "McDonald's", years: 2 });
+    expect(r.education[0]).toMatchObject({ level: "bachelor", inProgress: true });
+    expect(r.isStudent).toBe(true);
+    expect(r.projects).toEqual(["Inventory tracker in Python"]);
+    expect(r.certifications).toEqual(["CPR"]);
+    expect(r.education[0].institution).toBe("Lincoln University");
+    expect(r.skills.map((s) => s.name)).toEqual(expect.arrayContaining(["teamwork", "bilingual", "Basket Weaving"]));
+  });
+  it("suggests related categories and transferable skills", () => {
+    const a = analyzeResumeText(TEXT);
+    expect(a.suggestedCategories).toEqual(expect.arrayContaining(["Fast Food", "Retail", "Hospitality", "Customer Service"]));
+    expect(a.transferableSkills.length).toBeGreaterThan(0);
+  });
+  it("handles an applicant with no work history", () => {
+    const r = parseResumeText("Education\nHigh school student, expected graduation 2027\nNo work experience");
+    expect(r.experience).toEqual([]);
+    expect(r.isStudent).toBe(true);
+    expect(suggestedCategories(buildProfile(r))).toEqual(expect.arrayContaining(["Internships", "Entry-Level"]));
+  });
+  it("invents nothing from empty text", () => {
+    expect(parseResumeText("")).toMatchObject({ skills: [], experience: [], education: [], certifications: [], isStudent: false });
   });
 });

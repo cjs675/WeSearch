@@ -129,6 +129,8 @@ function skillComponent(job: SourceJob, profile: MatchProfile) {
 
 function experienceComponent(job: SourceJob, profile: MatchProfile): [number, string] {
   const same = job.categories.find((c) => profile.workCategories.includes(c));
+  const stepUp = isSenior(job) && !profile.roles.some((role) => hasAny(norm(role.title), SENIOR_TITLE_TERMS));
+  if (same && stepUp) return [Math.round(EXPERIENCE_MAX * 0.5), `You have worked in ${same}, but this is a more senior role than yours.`];
   if (same) return [EXPERIENCE_MAX, `You have worked in ${same}.`];
   for (const own of profile.workCategories) {
     const near = job.categories.find((c) => TRANSFERABLE_CATEGORIES[own].includes(c));
@@ -162,6 +164,14 @@ function qualificationComponent(qualifications: Qualification[]): [number, strin
   return [points, "No mandatory qualifications found in the text we received."];
 }
 
+function relevantExperience(job: SourceJob, profile: MatchProfile): string[] {
+  const roles = profile.roles.filter(({ categories }) =>
+    categories.some((own) => job.categories.includes(own) || TRANSFERABLE_CATEGORIES[own].some((c) => job.categories.includes(c))));
+  const wanted = canonicalSkills(`${job.title} ${job.description}`);
+  const projects = profile.projects.filter((project) => canonicalSkills(project).some((s) => wanted.includes(s)));
+  return [...roles.map((r) => r.title), ...projects.map((p) => p.slice(0, 120))];
+}
+
 export function scoreJob(job: SourceJob, profile: MatchProfile): CompatibilityScore {
   const skills = skillComponent(job, profile);
   const [experiencePoints, experienceText] = experienceComponent(job, profile);
@@ -182,5 +192,6 @@ export function scoreJob(job: SourceJob, profile: MatchProfile): CompatibilitySc
     missingSkills: skills.missing,
     skillsTypicalForRole: skills.typical,
     qualifications,
+    relevantExperience: relevantExperience(job, profile),
   };
 }

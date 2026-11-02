@@ -1,21 +1,25 @@
 import type { JobCategory, JobMatch, JobSearchRequest, JobSearchResponse, JobSourceStatus, Resume } from "@/types";
-import { buildProfile, roleCategories, suggestedCategories } from "./profile";
+import { buildProfile, suggestedCategories } from "./profile";
 import { isEntryLevel, isSenior, requiredYears, scoreJob } from "./scoring";
 import { fetchAll } from "./sources";
+import { EMPLOYERS } from "./sources/employers";
 import type { JobSource, SourceJob } from "./sources/types";
 import { CATEGORIES, CATEGORY_NAMES, CORPORATE_TITLE_TERMS, JOB_TYPE_KEYWORDS, KEYWORD_CATEGORY_ALIASES, RELATED_KEYWORDS } from "./taxonomy";
 import { hasAny, hasTerm, norm } from "./text";
 
 const DEFAULT_MAX_AGE_DAYS = 90;
+// Still on a live board, so likely open, but anything older tends to be a standing ad rather than a real opening
+const LIVE_BOARD_MAX_AGE_DAYS = 365;
 const MAX_RESULTS = 100;
-const EMPLOYER_TERMS = CATEGORY_NAMES.flatMap((c) => CATEGORIES[c].employers ?? []);
+const EMPLOYER_TERMS = [...CATEGORY_NAMES.flatMap((c) => CATEGORIES[c].employers ?? []), ...EMPLOYERS.map((e) => norm(e.name))];
 
 /** Categories a listing belongs to, judged on title, employer and board label, never on the description alone. */
-export function jobCategories(job: Pick<SourceJob, "title" | "employer" | "description" | "labels">): JobCategory[] {
+export function jobCategories(job: SourceJob): JobCategory[] {
   const title = norm(job.title);
   const employer = norm(job.employer);
   return CATEGORY_NAMES.filter((name) => {
     const category = CATEGORIES[name];
+    if (name === "Entry-Level" && isEntryLevel(job) && !isSenior(job)) return true;
     if (hasAny(title, category.exclude)) return false;
     const context = category.contextTitles;
     return (
@@ -48,7 +52,17 @@ export function keywordTier(job: SourceJob, keyword: string): number {
   return hasTerm(text, key) ? 1 : 0;
 }
 
-/** Queries to send to the APIs and job titles to show the user. Explicit choices always come first. */
+/** Categories a keyword points to, used to choose what to read. It never loosens what counts as a match. */
+export function keywordHintCategories(keyword: string): JobCategory[] {
+  const key = norm(keyword);
+  if (KEYWORD_CATEGORY_ALIASES[key]) return [KEYWORD_CATEGORY_ALIASES[key]];
+  return CATEGORY_NAMES.filter((name) => {
+    const category = CATEGORIES[name];
+    return [...category.titles, ...category.titlesToTry.map(norm), ...(category.contextTitles?.titles ?? []), ...(category.employers ?? [])].includes(key);
+  });
+}
+
+/** Search terms and related job titles to look for. Explicit choices always come first. */
 export function generateTerms(categories: JobCategory[], keywords: string[]) {
   const queries: string[] = [];
   const titles: string[] = [];
@@ -111,10 +125,14 @@ function ageInDays(job: SourceJob, now: number): number | null {
   return Number.isNaN(posted) ? null : Math.floor((now - posted) / 86_400_000);
 }
 
-function locationFits(job: SourceJob, wanted: string): boolean {
-  if (job.remote || job.locationCheckedByApi) return true;
-  const city = norm(wanted.split(",")[0]);
-  return Boolean(city) && hasTerm(norm(job.location), city);
+function locationFits(job: SourceJob, wanted: string, distanceMiles?: number): boolean {
+  if (job.remote) return true;
+  const place = job.location ?? "";
+  const [city, state] = wanted.split(",").map((part) => part.trim());
+  const inState = (code: string) => new RegExp(`[,\\s]${code.toUpperCase()}\\b`).test(place);
+  if (/^[a-z]{2}$/i.test(wanted.trim())) return inState(wanted.trim());
+  if (distanceMiles && state && /^[a-z]{2}$/i.test(state) && inState(state)) return true;
+  return Boolean(city) && hasTerm(norm(place), norm(city));
 }
 
 const yearlyPay = (job: SourceJob) => job.salary?.max ?? job.salary?.min ?? null;
@@ -128,8 +146,9 @@ export function applyFilters(items: Scored[], request: JobSearchRequest, now = D
   const remote = request.remote ?? "any";
   const kept = items.filter(({ job, match }) => {
     const age = ageInDays(job, now);
-    if (maxAge !== null && age !== null && age > maxAge) return count("age");
-    if (request.location && !locationFits(job, request.location)) return count("location");
+    const limit = job.verifiedOpen && maxAge !== null ? Math.max(maxAge, LIVE_BOARD_MAX_AGE_DAYS) : maxAge;
+    if (limit !== null && age !== null && age > limit) return count("age");
+    if (request.location && !locationFits(job, request.location, request.distanceMiles)) return count("location");
     if ((remote === "only" && !job.remote) || (remote === "exclude" && job.remote)) return count("remote");
     if (request.jobType && job.jobType !== null && job.jobType !== request.jobType) return count("jobType");
     if (request.minSalary) {
@@ -140,8 +159,8 @@ export function applyFilters(items: Scored[], request: JobSearchRequest, now = D
     return true;
   });
   const notes: string[] = [];
-  if (counts.age) notes.push(`${counts.age} listings hidden for being posted over ${maxAge} days ago.`);
-  if (request.distanceMiles) notes.push("Distance is only applied by USAJOBS. Other sources match the same city name or remote.");
+  if (counts.age) notes.push(`${counts.age} older listings hidden because they may have closed.`);
+  if (request.distanceMiles) notes.push("Exact distance can't be measured from these sources, so this shows the same city, the same state, or remote.");
   if (request.jobType && kept.some(({ job }) => job.jobType === null)) notes.push("Listings that don't state a job type stay in the results.");
   if (request.minSalary && !request.salaryRequired && kept.some(({ job }) => yearlyPay(job) === null)) notes.push("Listings with no stated pay stay in the results.");
   return { kept, counts, notes };
@@ -149,6 +168,7 @@ export function applyFilters(items: Scored[], request: JobSearchRequest, now = D
 
 function emptyMessage(statuses: JobSourceStatus[], filtered: Record<string, number>): string {
   if (!statuses.some((s) => s.state === "ok")) return "No job source could be reached, so there are no results.";
+  if (!statuses.some((s) => s.count > 0)) return "Job sources responded, but had no listings for this search.";
   const reasons = Object.keys(filtered);
   if (reasons.length === 1 && reasons[0] === "age") return "The only matches are old listings, which are hidden because they may have closed.";
   if (reasons.length) return "Job sources responded, but your filters removed every match. Try loosening them.";
@@ -156,7 +176,7 @@ function emptyMessage(statuses: JobSourceStatus[], filtered: Record<string, numb
 }
 
 /** Strips pipeline-only fields so they don't leak into the API response. */
-function publicJob({ level: _level, labels: _labels, locationCheckedByApi: _checked, ...job }: SourceJob) {
+function publicJob({ level: _level, labels: _labels, verifiedOpen: _open, ...job }: SourceJob) {
   return job;
 }
 
@@ -171,11 +191,10 @@ export async function searchJobs(request: JobSearchRequest, resume?: Resume | nu
   }
 
   const searchCategories = explicit ? categories : suggested;
-  // Sources with no text search are browsed by category, so work out which ones a keyword points to.
-  // This only widens what's fetched: listings still have to match the keyword below.
-  const keywordCategories = keywords.flatMap((k) => KEYWORD_CATEGORY_ALIASES[norm(k)] ?? roleCategories(k, k));
+  // These sources have no text search, so categories decide what to read. Listings still have to match the keyword below.
+  const keywordCategories = keywords.flatMap(keywordHintCategories);
   const { queries, titles } = generateTerms(searchCategories, keywords);
-  const { jobs: raw, statuses } = await fetchAll(queries, [...new Set([...searchCategories, ...keywordCategories])], request, sources);
+  const { jobs: raw, statuses } = await fetchAll([...new Set([...searchCategories, ...keywordCategories])], request, sources);
   const entryOnly = !explicit && profile !== null && !profile.hasExperience;
 
   const scored: Scored[] = [];
