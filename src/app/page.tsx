@@ -19,6 +19,7 @@ import {
   Target,
   X,
   Loader2,
+  AlertTriangle,
 } from 'lucide-react'
 import type { JobMatch, JobCategory, Resume, JobSourceStatus } from '@/types'
 import { CategoryFilter } from '@/components/CategoryFilter'
@@ -27,8 +28,8 @@ import { JobCard } from '@/components/JobCard'
 
 const navItems = [
   { label: 'Overview', icon: LayoutDashboard },
-  { label: 'My matches', icon: Target, count: '12' },
-  { label: 'Saved roles', icon: BriefcaseBusiness, count: '4' },
+  { label: 'My matches', icon: Target },
+  { label: 'Saved roles', icon: BriefcaseBusiness },
 ]
 
 export default function Page() {
@@ -41,12 +42,16 @@ export default function Page() {
   const [matches, setMatches] = useState<JobMatch[]>([])
   const [sources, setSources] = useState<JobSourceStatus[]>([])
   const [sourceMessage, setSourceMessage] = useState<string | null>(null)
-  const [loading, setLoading] = useState(false)
+  const [searchError, setSearchError] = useState<string | null>(null)
+  // Start as loading so the first paint shows a spinner instead of flashing
+  // an empty "No listings found" box before the initial fetch lands.
+  const [loading, setLoading] = useState(true)
   const [hasSearched, setHasSearched] = useState(false)
 
   const handleSearch = useCallback(async (currentResume?: Resume | null) => {
     setLoading(true)
     setHasSearched(true)
+    setSearchError(null)
     try {
       const activeResume = currentResume !== undefined ? currentResume : resume
       const res = await fetch('/api/jobs/search', {
@@ -68,11 +73,11 @@ export default function Page() {
         setSources(data.sources || [])
         setSourceMessage(data.message || null)
       } else {
-        setSourceMessage('Failed to fetch job listings from server.')
+        setSearchError('Failed to fetch job listings from server.')
       }
     } catch (err) {
       console.error('Error fetching jobs:', err)
-      setSourceMessage('Unable to reach job search service.')
+      setSearchError('Unable to reach the job search service. Check your connection and try again.')
     } finally {
       setLoading(false)
     }
@@ -108,7 +113,7 @@ export default function Page() {
           <p className="mb-3 px-3 text-[10px] font-semibold uppercase tracking-[0.2em] text-[#a1a1aa]">
             Workspace
           </p>
-          {navItems.map(({ label, icon: Icon, count }, index) => (
+          {navItems.map(({ label, icon: Icon }, index) => (
             <a
               key={label}
               href={index === 0 ? '#top' : '#stories'}
@@ -122,7 +127,6 @@ export default function Page() {
                 <Icon className="size-4" />
                 {label}
               </span>
-              {count && <span className="text-xs text-[#a1a1aa]">{count}</span>}
             </a>
           ))}
         </div>
@@ -174,6 +178,7 @@ export default function Page() {
             </button>
             <button
               aria-label="Toggle menu"
+              aria-expanded={menuOpen}
               onClick={() => setMenuOpen(!menuOpen)}
               className="rounded-lg border border-[#dededb] p-2 lg:hidden"
             >
@@ -200,14 +205,14 @@ export default function Page() {
           <section id="top" className="grid gap-10 lg:grid-cols-[1fr_360px] lg:items-end">
             <div>
               <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-[#d4d4d0] bg-[#fafaf9] px-3 py-1.5 text-xs text-[#71717a]">
-                <span className="live-dot" /> Live Job Sources Active
+                <span className="live-dot" /> Live FL + Remote Tech Jobs
               </div>
               <h1 className="max-w-2xl text-5xl font-medium leading-[0.96] tracking-[-0.075em] sm:text-7xl">
                 Find work that<br />
                 <span className="text-[#a1a1aa]">fits you.</span>
               </h1>
               <p className="mt-6 max-w-md text-base leading-relaxed text-[#71717a]">
-                A quieter, smarter way to search. WeSearch connects your background with real live job opportunities using AI compatibility matching.
+                A quieter, smarter way to search. WeSearch ranks real, live tech jobs located across Florida — plus remote roles you can take from here — against your own background.
               </p>
             </div>
 
@@ -270,7 +275,7 @@ export default function Page() {
                   aria-label="Location"
                   value={location}
                   onChange={(e) => setLocation(e.target.value)}
-                  placeholder="Location or remote"
+                  placeholder="Narrow by FL city, e.g. Miami (optional)"
                   className="w-full bg-transparent text-sm outline-none placeholder:text-[#a1a1aa]"
                 />
               </label>
@@ -293,7 +298,9 @@ export default function Page() {
             </form>
 
             <div className="mt-4 border-t border-[#dededb]/60 pt-3">
-              <span className="text-[11px] font-medium text-[#71717a]">Filter by category:</span>
+              <span className="text-[11px] font-medium text-[#71717a]">
+                Narrow by tech category:
+              </span>
               <CategoryFilter
                 selectedCategories={selectedCategories}
                 onToggleCategory={handleToggleCategory}
@@ -345,6 +352,16 @@ export default function Page() {
               </div>
             </div>
 
+            {!loading && searchError && (
+              <div
+                role="alert"
+                className="mt-7 flex items-start gap-2 rounded-xl border border-[#fecaca] bg-[#fef2f2] px-4 py-3 text-sm text-[#b91c1c]"
+              >
+                <AlertTriangle className="mt-0.5 size-4 shrink-0" />
+                <span>{searchError}</span>
+              </div>
+            )}
+
             {loading ? (
               <div className="mt-10 flex flex-col items-center justify-center py-16 text-[#71717a]">
                 <Loader2 className="size-8 animate-spin text-[#18181b]" />
@@ -360,7 +377,8 @@ export default function Page() {
               <div className="mt-8 rounded-xl border border-dashed border-[#dededb] bg-[#fafaf9] p-8 text-center text-sm text-[#71717a]">
                 <p className="font-medium text-[#18181b]">No listings found</p>
                 <p className="mt-1 text-xs">
-                  {sourceMessage || 'Try adjusting your search query, location, or selected categories.'}
+                  {sourceMessage ||
+                    'Try a broader keyword, a different category chip, or clear the location to see all Florida + remote tech jobs.'}
                 </p>
               </div>
             )}

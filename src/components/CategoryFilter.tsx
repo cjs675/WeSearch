@@ -21,6 +21,7 @@ export function CategoryFilter({
             key={cat}
             type="button"
             onClick={() => onToggleCategory(cat)}
+            aria-pressed={isSelected}
             className={`rounded-full px-3 py-1 text-xs font-medium transition ${
               isSelected
                 ? 'bg-[#18181b] text-white shadow-sm'

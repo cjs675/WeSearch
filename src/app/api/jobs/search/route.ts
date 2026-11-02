@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { searchJobs } from "@/features/job-matching/search";
-import type { JobSearchRequest, Resume } from "@/types";
+import { JOB_CATEGORIES } from "@/types";
+import type { JobCategory, JobSearchRequest, Resume } from "@/types";
 
 export async function POST(req: Request) {
   try {
@@ -31,12 +32,16 @@ export async function GET(req: Request) {
     const url = new URL(req.url);
     const query = url.searchParams.get("query") || "";
     const location = url.searchParams.get("location") || "";
-    const category = url.searchParams.get("category");
+    const categoryParam = url.searchParams.get("category");
+    const category =
+      categoryParam && (JOB_CATEGORIES as readonly string[]).includes(categoryParam)
+        ? [categoryParam as JobCategory]
+        : [];
 
     const jobSearchRequest: JobSearchRequest = {
       keywords: query ? [query] : [],
       location: location || undefined,
-      categories: category ? [category as any] : [],
+      categories: category,
     };
 
     const response = await searchJobs(jobSearchRequest);

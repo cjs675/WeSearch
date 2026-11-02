@@ -1,19 +1,18 @@
+/**
+ * Tech subcategories used as filter chips. These scope the app:
+ * every listing shown is a tech job, located in Florida or remote.
+ */
 export const JOB_CATEGORIES = [
-  "Fast Food",
-  "Retail",
-  "Restaurants",
-  "Warehouse",
-  "Customer Service",
-  "Internships",
-  "Office",
-  "Healthcare",
+  "Software Engineering",
+  "Data & AI",
+  "DevOps & Cloud",
+  "QA",
   "Security",
-  "Skilled Trades",
-  "Technology",
-  "Government",
-  "Education",
-  "Hospitality",
-  "Delivery",
+  "Design",
+  "Product",
+  "IT & Support",
+  "Internships",
+  "Other Tech",
 ] as const;
 
 export type JobCategory = (typeof JOB_CATEGORIES)[number];

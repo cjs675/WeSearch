@@ -20,7 +20,7 @@ export interface JobListing {
   location: string | null;
   remote: boolean;
   description: string;
-  /** True when the API returned only part of the posting. */
+  /** True when the text shown is only part of the posting's full description. */
   descriptionIsPartial: boolean;
   /** Link to apply, exactly as the API gave it. */
   applyUrl: string;

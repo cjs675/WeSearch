@@ -14,6 +14,21 @@ export function JobCard({ match }: JobCardProps) {
 
   const initial = (job.employer || job.title).charAt(0).toUpperCase()
 
+  // Only numbers actually present become part of the range, so "$ - $50,000" can't happen.
+  const salary =
+    job.salary && typeof job.salary.min === 'number' && job.salary.min > 0
+      ? `$${job.salary.min.toLocaleString()}`
+      : null
+  const salaryRange =
+    job.salary && typeof job.salary.max === 'number' && job.salary.max > 0
+      ? salary
+        ? `${salary} – $${job.salary.max.toLocaleString()}`
+        : `$${job.salary.max.toLocaleString()}`
+      : salary
+
+  // The APIs always give absolute links, but a broken apply button is worse than none.
+  const canApply = /^https?:\/\//i.test(job.applyUrl)
+
   return (
     <div className="flex flex-col rounded-xl border border-[#dededb] bg-[#fafaf9] p-5 transition hover:border-[#a1a1aa]">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
@@ -49,11 +64,8 @@ export function JobCard({ match }: JobCardProps) {
                   {job.location}
                 </span>
               )}
-              {job.salary && (
-                <span className="text-[#52525b]">
-                  ${job.salary.min ? job.salary.min.toLocaleString() : ''}
-                  {job.salary.max ? ` - $${job.salary.max.toLocaleString()}` : ''}
-                </span>
+              {salaryRange && (
+                <span className="text-[#52525b]">{salaryRange}</span>
               )}
               <span className="text-[10px] text-[#c4c4c0]">via {job.sources.join(', ')}</span>
             </div>
@@ -70,14 +82,18 @@ export function JobCard({ match }: JobCardProps) {
             <span className="text-xs text-[#a1a1aa]">live listing</span>
           )}
 
-          <a
-            href={job.applyUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 rounded-lg bg-[#18181b] px-3.5 py-1.5 text-xs font-medium text-white transition hover:bg-[#3f3f46]"
-          >
-            Apply <ArrowUpRight className="size-3" />
-          </a>
+          {canApply ? (
+            <a
+              href={job.applyUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 rounded-lg bg-[#18181b] px-3.5 py-1.5 text-xs font-medium text-white transition hover:bg-[#3f3f46]"
+            >
+              Apply <ArrowUpRight className="size-3" />
+            </a>
+          ) : (
+            <span className="text-xs text-[#a1a1aa]">No apply link</span>
+          )}
         </div>
       </div>
 
@@ -114,6 +130,7 @@ export function JobCard({ match }: JobCardProps) {
         <button
           type="button"
           onClick={() => setExpanded(!expanded)}
+          aria-expanded={expanded}
           className="flex items-center gap-1 text-xs text-[#71717a] hover:text-[#18181b]"
         >
           {expanded ? (
@@ -157,6 +174,11 @@ export function JobCard({ match }: JobCardProps) {
           <div>
             <h4 className="font-semibold text-[#18181b] mb-1">About the Role</h4>
             <p className="whitespace-pre-line text-[#71717a]">{job.description || 'No description provided.'}</p>
+            {job.descriptionIsPartial && (
+              <p className="mt-1 text-[11px] italic text-[#a1a1aa]">
+                Preview truncated — open the posting for the full description.
+              </p>
+            )}
           </div>
         </div>
       )}

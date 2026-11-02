@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react'
 import type { Resume, Skill } from '@/types'
-import { Sparkles, FileText, Plus, X, Upload } from 'lucide-react'
+import { Sparkles, X, Upload } from 'lucide-react'
 
 interface ResumeUploaderProps {
   resume: Resume | null
@@ -14,25 +14,41 @@ export function ResumeUploader({ resume, onResumeChange }: ResumeUploaderProps) 
   const [pasteText, setPasteText] = useState('')
   const [newSkill, setNewSkill] = useState('')
   const [isAnalyzing, setIsAnalyzing] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   const handleAnalyze = async () => {
     if (!pasteText.trim()) return
     setIsAnalyzing(true)
+    setError(null)
     try {
       const res = await fetch('/api/resume/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text: pasteText }),
       })
-      if (res.ok) {
-        const data = await res.json()
-        if (data.resume) {
-          onResumeChange(data.resume)
+      const data = (await res.json().catch(() => null)) as { error?: string; resume?: Resume } | null
+      if (res.ok && data?.resume) {
+        const parsed = data.resume
+        const hasContent =
+          parsed.skills.length > 0 ||
+          parsed.experience.length > 0 ||
+          parsed.education.length > 0 ||
+          parsed.certifications.length > 0
+        if (hasContent) {
+          onResumeChange(parsed)
+          setPasteText('')
           setIsOpen(false)
+        } else {
+          setError(
+            "We couldn't find any skills or experience in that text. Try adding skills manually below."
+          )
         }
+      } else {
+        setError(data?.error || 'Could not analyze that text. Try again.')
       }
     } catch (err) {
-      console.error('Failed to parse resume:', err)
+      console.error('Failed to analyze resume:', err)
+      setError('Could not reach the resume analyzer. Try again.')
     } finally {
       setIsAnalyzing(false)
     }
@@ -121,7 +137,12 @@ export function ResumeUploader({ resume, onResumeChange }: ResumeUploaderProps) 
   const handleRemoveSkill = (skillName: string) => {
     if (!resume) return
     const updatedSkills = resume.skills.filter((s) => s.name !== skillName)
-    if (updatedSkills.length === 0) {
+    const hasOtherContent =
+      resume.experience.length > 0 ||
+      resume.education.length > 0 ||
+      resume.certifications.length > 0
+    // Only discard the profile when nothing else in it would be lost.
+    if (updatedSkills.length === 0 && !hasOtherContent) {
       onResumeChange(null)
     } else {
       onResumeChange({ ...resume, skills: updatedSkills })
@@ -137,8 +158,10 @@ export function ResumeUploader({ resume, onResumeChange }: ResumeUploaderProps) 
             <h3 className="text-sm font-semibold text-[#18181b]">Candidate Profile & Skills</h3>
           </div>
           <p className="mt-1 text-xs text-[#71717a]">
-            {resume && resume.skills.length > 0
-              ? `${resume.skills.length} skills active for personalized fit scoring.`
+            {resume
+              ? resume.skills.length > 0
+                ? `${resume.skills.length} skill${resume.skills.length === 1 ? '' : 's'} active for personalized fit scoring.`
+                : 'Profile saved with no skills yet — add one below.'
               : 'Add skills or paste your background to rank listings by compatibility.'}
           </p>
         </div>
@@ -166,26 +189,49 @@ export function ResumeUploader({ resume, onResumeChange }: ResumeUploaderProps) 
           <button
             type="button"
             onClick={() => setIsOpen(!isOpen)}
+            aria-expanded={isOpen}
             className="flex items-center gap-1.5 rounded-lg border border-[#dededb] bg-white px-3 py-1.5 text-xs font-medium text-[#18181b] shadow-sm transition hover:bg-[#f0f0ee]"
           >
             <Upload className="size-3.5" />
             {isOpen ? 'Close' : 'Paste Background'}
           </button>
+
+          {resume && (
+            <button
+              type="button"
+              onClick={() => {
+                onResumeChange(null)
+                setPasteText('')
+                setError(null)
+              }}
+              aria-label="Clear profile"
+              className="flex items-center gap-1.5 rounded-lg border border-[#dededb] bg-white px-3 py-1.5 text-xs font-medium text-[#71717a] transition hover:bg-[#f0f0ee] hover:text-[#18181b]"
+            >
+              <X className="size-3.5" />
+              Clear profile
+            </button>
+          )}
         </div>
       </div>
 
       {isOpen && (
         <div className="mt-4 border-t border-[#dededb] pt-4">
-          <label className="block text-xs font-medium text-[#71717a]">
+          <label htmlFor="paste-background" className="block text-xs font-medium text-[#71717a]">
             Paste resume text or job history:
           </label>
           <textarea
+            id="paste-background"
             value={pasteText}
             onChange={(e) => setPasteText(e.target.value)}
             placeholder="e.g. Senior Software Engineer with 4 years building React, TypeScript, Node.js applications..."
             className="mt-1.5 w-full rounded-lg border border-[#dededb] bg-white p-3 text-xs text-[#18181b] outline-none placeholder:text-[#a1a1aa] focus:border-[#71717a]"
             rows={4}
           />
+          {error && (
+            <p role="alert" className="mt-2 text-xs text-[#b91c1c]">
+              {error}
+            </p>
+          )}
           <div className="mt-2 flex justify-end">
             <button
               type="button"
@@ -199,9 +245,12 @@ export function ResumeUploader({ resume, onResumeChange }: ResumeUploaderProps) 
         </div>
       )}
 
-      {resume && resume.skills.length > 0 && (
+      {resume && (
         <div className="mt-4 flex flex-wrap items-center gap-1.5 border-t border-[#dededb] pt-4">
           <span className="text-[11px] font-medium text-[#71717a] mr-1">Active skills:</span>
+          {resume.skills.length === 0 && (
+            <span className="text-[11px] text-[#a1a1aa]">None yet — add one:</span>
+          )}
           {resume.skills.map((skill) => (
             <span
               key={skill.name}
@@ -224,6 +273,7 @@ export function ResumeUploader({ resume, onResumeChange }: ResumeUploaderProps) 
               type="text"
               value={newSkill}
               onChange={(e) => setNewSkill(e.target.value)}
+              aria-label="Add a skill"
               placeholder="+ add skill"
               className="h-6 w-24 rounded border border-dashed border-[#dededb] bg-transparent px-2 text-xs text-[#18181b] outline-none placeholder:text-[#a1a1aa] focus:border-[#71717a]"
             />

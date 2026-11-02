@@ -5,19 +5,35 @@ export async function POST(req: Request) {
   try {
     const contentType = req.headers.get("content-type") || "";
     let rawText = "";
+    let uploadedPdf = false;
 
     if (contentType.includes("application/json")) {
-      const data = await req.json();
-      rawText = data.text || "";
+      const data = (await req.json().catch(() => null)) as { text?: unknown } | null;
+      rawText = typeof data?.text === "string" ? data.text : "";
     } else if (contentType.includes("multipart/form-data")) {
       const formData = await req.formData();
       const file = formData.get("file");
       if (file && typeof file !== "string") {
-        // Simple extraction of text content from uploaded text/plain or string representation
-        const arrayBuffer = await file.arrayBuffer();
-        const buffer = Buffer.from(arrayBuffer);
-        rawText = buffer.toString("utf-8");
+        const buffer = Buffer.from(await file.arrayBuffer());
+        // PDFs can't be read as plain text; say so instead of returning garbage.
+        uploadedPdf = buffer.subarray(0, 5).toString("latin1") === "%PDF-";
+        if (!uploadedPdf) {
+          rawText = buffer.toString("utf-8");
+        }
       }
+    }
+
+    if (uploadedPdf) {
+      return NextResponse.json(
+        { error: "PDF files aren't supported yet — please paste your resume text instead." },
+        { status: 400 }
+      );
+    }
+    if (!rawText.trim()) {
+      return NextResponse.json(
+        { error: "No text was provided to analyze. Paste your background text and try again." },
+        { status: 400 }
+      );
     }
 
     const resume = parseResumeText(rawText);
