@@ -14,7 +14,7 @@ npm install
 npm run dev
 ```
 
-Then open http://localhost:3000. No API keys or accounts are needed.
+Then open http://localhost:3000. No API keys or accounts are needed. See `src/features/job-matching/README.md` and `src/features/resume-analysis/README.md` for how search and resume reading work.
 
 Other useful commands:
 

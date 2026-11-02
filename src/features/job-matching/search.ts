@@ -11,6 +11,8 @@ const DEFAULT_MAX_AGE_DAYS = 90;
 // Still on a live board, so likely open, but anything older tends to be a standing ad rather than a real opening
 const LIVE_BOARD_MAX_AGE_DAYS = 365;
 const MAX_RESULTS = 100;
+const MAX_SUGGESTED_CATEGORIES = 6;
+const SUGGESTIONS_PER_EMPLOYER_FIRST = 8;
 const EMPLOYER_TERMS = [...CATEGORY_NAMES.flatMap((c) => CATEGORIES[c].employers ?? []), ...EMPLOYERS.map((e) => norm(e.name))];
 
 /** Categories a listing belongs to, judged on title, employer and board label, never on the description alone. */
@@ -166,6 +168,19 @@ export function applyFilters(items: Scored[], request: JobSearchRequest, now = D
   return { kept, counts, notes };
 }
 
+/** Keeps the order, but moves one employer's overflow behind everyone else's so it can't fill the list. */
+export function spreadEmployers<T extends { job: { employer: string | null } }>(items: T[], perEmployer = SUGGESTIONS_PER_EMPLOYER_FIRST): T[] {
+  const seen = new Map<string | null, number>();
+  const first: T[] = [];
+  const rest: T[] = [];
+  for (const item of items) {
+    const count = seen.get(item.job.employer) ?? 0;
+    seen.set(item.job.employer, count + 1);
+    (count < perEmployer ? first : rest).push(item);
+  }
+  return [...first, ...rest];
+}
+
 function emptyMessage(statuses: JobSourceStatus[], filtered: Record<string, number>): string {
   if (!statuses.some((s) => s.state === "ok")) return "No job source could be reached, so there are no results.";
   if (!statuses.some((s) => s.count > 0)) return "Job sources responded, but had no listings for this search.";
@@ -184,7 +199,7 @@ export async function searchJobs(request: JobSearchRequest, resume?: Resume | nu
   const { keywords, categories } = request;
   const profile = resume ? buildProfile(resume) : null;
   const explicit = categories.length > 0 || keywords.length > 0;
-  const suggested = profile ? suggestedCategories(profile) : [];
+  const suggested = profile ? [...new Set([...suggestedCategories(profile), ...(resume?.suggestedCategories ?? [])])].slice(0, MAX_SUGGESTED_CATEGORIES) : [];
   const base = { suggestedCategories: suggested, sources: [] as JobSourceStatus[], searchTerms: [] as string[], relatedTitles: [] as string[], notes: [] as string[] };
   if (!explicit && !profile) {
     return { ...base, matches: [], total: 0, message: "Choose a category, type a keyword, or add a resume to search." };
@@ -223,9 +238,12 @@ export async function searchJobs(request: JobSearchRequest, resume?: Resume | nu
     (b.match.compatibility?.score ?? -1) - (a.match.compatibility?.score ?? -1) ||
     (b.job.postedAt ?? "").localeCompare(a.job.postedAt ?? ""));
 
+  // With nothing chosen, show the range of work the resume points to rather than one employer's many openings
+  const ranked = explicit ? kept : spreadEmployers(kept);
+
   return {
     ...base,
-    matches: kept.slice(0, MAX_RESULTS).map((item) => item.match),
+    matches: ranked.slice(0, MAX_RESULTS).map((item) => item.match),
     total: kept.length,
     sources: statuses,
     searchTerms: queries.slice(0, 6),

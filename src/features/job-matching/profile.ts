@@ -1,5 +1,5 @@
-import type { Education, JobCategory, Resume, TransferableSkill } from "@/types";
-import { CATEGORIES, CATEGORY_NAMES, SKILLS, STUDENT_CATEGORIES, TRANSFERABLE_CATEGORIES, TRANSFERABLE_SKILLS } from "./taxonomy";
+import type { Education, JobCategory, Resume } from "@/types";
+import { CATEGORIES, CATEGORY_NAMES, SKILLS, STUDENT_CATEGORIES, TRANSFERABLE_CATEGORIES } from "./taxonomy";
 import { hasAny, norm } from "./text";
 
 /** A resume reduced to what matching needs. */
@@ -65,12 +65,4 @@ export function suggestedCategories(profile: MatchProfile): JobCategory[] {
   for (const category of profile.workCategories) suggested.push(...TRANSFERABLE_CATEGORIES[category]);
   if (!profile.hasExperience) suggested.push(...STUDENT_CATEGORIES);
   return [...new Set(suggested)];
-}
-
-/** What the skills on a resume also count toward, for showing the applicant. */
-export function transferableSkills(profile: MatchProfile): TransferableSkill[] {
-  return profile.skills.flatMap((have) =>
-    Object.entries(TRANSFERABLE_SKILLS[have] ?? {})
-      .filter(([target]) => !profile.skills.includes(target))
-      .map(([countsToward, explanation]) => ({ have, countsToward, explanation })));
 }

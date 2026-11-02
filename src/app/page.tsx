@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useCallback } from 'react'
 import {
   ArrowUpRight,
   Bell,
@@ -20,19 +20,44 @@ import {
   X,
   Loader2,
 } from 'lucide-react'
-import type { JobMatch, JobCategory, Resume, JobSourceStatus } from '@/types'
+import type { JobMatch, JobCategory, JobType, Resume, JobSourceStatus } from '@/types'
 import { CategoryFilter } from '@/components/CategoryFilter'
 import { ResumeUploader } from '@/components/ResumeUploader'
 import { JobCard } from '@/components/JobCard'
 
 const navItems = [
   { label: 'Overview', icon: LayoutDashboard },
-  { label: 'My matches', icon: Target, count: '12' },
-  { label: 'Saved roles', icon: BriefcaseBusiness, count: '4' },
+  { label: 'My matches', icon: Target },
 ]
+
+type Mode = 'resume' | 'explore'
+
+const JOB_TYPES: [JobType, string][] = [
+  ['full_time', 'Full-time'],
+  ['part_time', 'Part-time'],
+  ['contract', 'Contract'],
+  ['temporary', 'Temporary'],
+  ['internship', 'Internship'],
+]
+const MODES: [Mode, string][] = [
+  ['resume', 'AI Resume Matches'],
+  ['explore', 'Explore All Jobs'],
+]
+const filterClass =
+  'mt-1 w-full rounded-lg border border-[#dededb] bg-[#f5f5f4] px-3 py-2 text-sm outline-none focus:border-[#a1a1aa]'
 
 export default function Page() {
   const [menuOpen, setMenuOpen] = useState(false)
+  const [mode, setMode] = useState<Mode>('resume')
+  const [distanceMiles, setDistanceMiles] = useState('')
+  const [remote, setRemote] = useState('any')
+  const [jobType, setJobType] = useState('')
+  const [minSalary, setMinSalary] = useState('')
+  const [salaryRequired, setSalaryRequired] = useState(false)
+  const [minScore, setMinScore] = useState('')
+  const [total, setTotal] = useState(0)
+  const [notes, setNotes] = useState<string[]>([])
+  const [relatedTitles, setRelatedTitles] = useState<string[]>([])
   const [query, setQuery] = useState('')
   const [location, setLocation] = useState('')
   const [selectedCategories, setSelectedCategories] = useState<JobCategory[]>([])
@@ -48,15 +73,22 @@ export default function Page() {
     setLoading(true)
     setHasSearched(true)
     try {
-      const activeResume = currentResume !== undefined ? currentResume : resume
+      const activeResume = mode === 'explore' ? null : currentResume !== undefined ? currentResume : resume
       const res = await fetch('/api/jobs/search', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           request: {
-            keywords: query.trim() ? query.trim().split(/\s+/) : [],
+            // Commas separate keywords, so "Crew Member" stays one search term
+            keywords: query,
             categories: selectedCategories,
             location: location.trim() || undefined,
+            distanceMiles,
+            remote,
+            jobType,
+            minSalary,
+            salaryRequired,
+            minScore: activeResume ? minScore : '',
           },
           resume: activeResume || undefined,
         }),
@@ -67,21 +99,35 @@ export default function Page() {
         setMatches(data.matches || [])
         setSources(data.sources || [])
         setSourceMessage(data.message || null)
+        setTotal(data.total ?? 0)
+        setNotes(data.notes || [])
+        setRelatedTitles(data.relatedTitles || [])
       } else {
-        setSourceMessage('Failed to fetch job listings from server.')
+        const data = await res.json().catch(() => null)
+        setMatches([])
+        setTotal(0)
+        setSourceMessage(data?.error || 'Failed to fetch job listings from server.')
       }
     } catch (err) {
       console.error('Error fetching jobs:', err)
-      setSourceMessage('Unable to reach job search service.')
+      setMatches([])
+      setTotal(0)
+      setSourceMessage('Unable to reach job search service. No results are shown because none were received.')
     } finally {
       setLoading(false)
     }
-  }, [query, selectedCategories, location, resume])
+  }, [query, selectedCategories, location, resume, mode, distanceMiles, remote, jobType, minSalary, salaryRequired, minScore])
 
-  useEffect(() => {
-    // Initial fetch of jobs on load
-    handleSearch()
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  const handleModeChange = (next: Mode) => {
+    setMode(next)
+    setMatches([])
+    setSources([])
+    setTotal(0)
+    setNotes([])
+    setRelatedTitles([])
+    setSourceMessage(null)
+    setHasSearched(false)
+  }
 
   const handleToggleCategory = (cat: JobCategory) => {
     setSelectedCategories((prev) =>
@@ -91,8 +137,10 @@ export default function Page() {
 
   const handleResumeChange = (newResume: Resume | null) => {
     setResume(newResume)
-    handleSearch(newResume)
+    if (newResume) handleSearch(newResume)
   }
+
+  const credited = sources.filter((s) => s.attributionUrl)
 
   return (
     <main className="min-h-screen bg-[#f5f5f4] text-[#18181b]">
@@ -108,7 +156,7 @@ export default function Page() {
           <p className="mb-3 px-3 text-[10px] font-semibold uppercase tracking-[0.2em] text-[#a1a1aa]">
             Workspace
           </p>
-          {navItems.map(({ label, icon: Icon, count }, index) => (
+          {navItems.map(({ label, icon: Icon }, index) => (
             <a
               key={label}
               href={index === 0 ? '#top' : '#stories'}
@@ -122,7 +170,6 @@ export default function Page() {
                 <Icon className="size-4" />
                 {label}
               </span>
-              {count && <span className="text-xs text-[#a1a1aa]">{count}</span>}
             </a>
           ))}
         </div>
@@ -229,10 +276,37 @@ export default function Page() {
             </div>
           </section>
 
+          {/* Search mode */}
+          <div role="tablist" aria-label="Search mode" className="mt-12 flex flex-wrap gap-2">
+            {MODES.map(([value, label]) => (
+              <button
+                key={value}
+                type="button"
+                role="tab"
+                aria-selected={mode === value}
+                onClick={() => handleModeChange(value)}
+                className={`rounded-lg px-4 py-2 text-sm font-medium transition ${
+                  mode === value
+                    ? 'bg-[#18181b] text-white'
+                    : 'border border-[#dededb] bg-[#fafaf9] text-[#71717a] hover:text-[#18181b]'
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+
+          {/* Profile / Resume Matching Section */}
+          {mode === 'resume' && (
+            <section id="profile" className="mt-4">
+              <ResumeUploader resume={resume} onResumeChange={handleResumeChange} />
+            </section>
+          )}
+
           {/* Search Box */}
           <section
             id="search"
-            className="mt-12 rounded-2xl border border-[#dededb] bg-[#fafaf9] p-5 shadow-[0_16px_40px_rgba(24,24,27,.04)] sm:p-7"
+            className="mt-4 rounded-2xl border border-[#dededb] bg-[#fafaf9] p-5 shadow-[0_16px_40px_rgba(24,24,27,.04)] sm:p-7"
           >
             <div className="mb-5 flex items-center justify-between">
               <div>
@@ -240,7 +314,7 @@ export default function Page() {
                   Search the market
                 </p>
                 <h2 className="mt-1 text-lg font-medium tracking-[-0.03em]">
-                  What are you looking for?
+                  {mode === 'resume' ? 'Narrow it down, or leave blank to use your resume' : 'What are you looking for?'}
                 </h2>
               </div>
               <Command className="hidden size-4 text-[#c4c4c0] sm:block" />
@@ -256,10 +330,10 @@ export default function Page() {
               <label className="flex items-center gap-3 rounded-lg border border-[#dededb] bg-[#f5f5f4] px-3.5 py-3 focus-within:border-[#a1a1aa]">
                 <Search className="size-4 text-[#a1a1aa]" />
                 <input
-                  aria-label="Role, skill, or company"
+                  aria-label="Role, skill, or company, separated by commas"
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
-                  placeholder="Role, skill, or company"
+                  placeholder="Cashier, Crew Member, Part-Time"
                   className="w-full bg-transparent text-sm outline-none placeholder:text-[#a1a1aa]"
                 />
               </label>
@@ -270,7 +344,7 @@ export default function Page() {
                   aria-label="Location"
                   value={location}
                   onChange={(e) => setLocation(e.target.value)}
-                  placeholder="Location or remote"
+                  placeholder="City, ST"
                   className="w-full bg-transparent text-sm outline-none placeholder:text-[#a1a1aa]"
                 />
               </label>
@@ -300,6 +374,47 @@ export default function Page() {
               />
             </div>
 
+            <details className="mt-4 border-t border-[#dededb]/60 pt-3 text-xs text-[#71717a]">
+              <summary className="cursor-pointer text-[11px] font-medium">More filters</summary>
+              <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+                <label>
+                  Distance (miles)
+                  <input type="number" min="1" value={distanceMiles} onChange={(e) => setDistanceMiles(e.target.value)} className={filterClass} />
+                </label>
+                <label>
+                  Remote work
+                  <select value={remote} onChange={(e) => setRemote(e.target.value)} className={filterClass}>
+                    <option value="any">Any</option>
+                    <option value="only">Remote only</option>
+                    <option value="exclude">No remote</option>
+                  </select>
+                </label>
+                <label>
+                  Job type
+                  <select value={jobType} onChange={(e) => setJobType(e.target.value)} className={filterClass}>
+                    <option value="">Any</option>
+                    {JOB_TYPES.map(([value, label]) => (
+                      <option key={value} value={value}>{label}</option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  Minimum pay a year ($)
+                  <input type="number" min="0" value={minSalary} onChange={(e) => setMinSalary(e.target.value)} className={filterClass} />
+                </label>
+                {mode === 'resume' && (
+                  <label>
+                    Minimum fit (%)
+                    <input type="number" min="0" max="100" value={minScore} onChange={(e) => setMinScore(e.target.value)} className={filterClass} />
+                  </label>
+                )}
+              </div>
+              <label className="mt-3 flex items-center gap-2">
+                <input type="checkbox" checked={salaryRequired} onChange={(e) => setSalaryRequired(e.target.checked)} />
+                Only jobs that list their pay
+              </label>
+            </details>
+
             {hasSearched && (
               <div className="mt-4 flex items-center gap-2 text-sm text-[#52525b]">
                 <Check className="size-4 text-[#18181b]" />
@@ -310,17 +425,12 @@ export default function Page() {
             )}
           </section>
 
-          {/* Profile / Resume Matching Section */}
-          <section id="profile" className="mt-10">
-            <ResumeUploader resume={resume} onResumeChange={handleResumeChange} />
-          </section>
-
           {/* Live matches / feed */}
           <section id="stories" className="mt-16 pb-12">
             <div className="flex flex-wrap items-end justify-between gap-5">
               <div>
                 <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#a1a1aa]">
-                  Live from verified job boards
+                  Live from public job boards
                 </p>
                 <h2 className="mt-2 text-3xl font-medium tracking-[-0.06em]">
                   Roles with a reason.
@@ -351,17 +461,65 @@ export default function Page() {
                 <p className="mt-3 text-sm">Querying job APIs and computing compatibility scores...</p>
               </div>
             ) : matches.length > 0 ? (
-              <div className="mt-7 flex flex-col gap-3">
-                {matches.map((match) => (
-                  <JobCard key={match.job.id} match={match} />
-                ))}
+              <div className="mt-7">
+                <p className="text-sm font-medium">
+                  {total} jobs found{total > matches.length ? `, showing the top ${matches.length}` : ''}
+                </p>
+                {matches.some((m) => m.compatibility) && (
+                  <p className="mt-1 text-xs text-[#71717a]">
+                    Fit estimates how well your qualifications match a posting. It isn&apos;t a chance of being hired.
+                  </p>
+                )}
+                <div className="mt-3 flex flex-col gap-3">
+                  {matches.map((match) => (
+                    <JobCard key={match.job.id} match={match} />
+                  ))}
+                </div>
               </div>
             ) : (
               <div className="mt-8 rounded-xl border border-dashed border-[#dededb] bg-[#fafaf9] p-8 text-center text-sm text-[#71717a]">
-                <p className="font-medium text-[#18181b]">No listings found</p>
-                <p className="mt-1 text-xs">
-                  {sourceMessage || 'Try adjusting your search query, location, or selected categories.'}
-                </p>
+                {hasSearched ? (
+                  <>
+                    <p className="font-medium text-[#18181b]">No listings found</p>
+                    <p className="mt-1 text-xs">
+                      {sourceMessage || 'Try adjusting your search query, location, or selected categories.'}
+                    </p>
+                  </>
+                ) : (
+                  <p>
+                    {mode === 'resume'
+                      ? 'Upload your resume to see matching jobs, or choose a category or keyword.'
+                      : 'Choose a category or type a keyword to search real listings.'}
+                  </p>
+                )}
+              </div>
+            )}
+
+            {!loading && hasSearched && (
+              <div className="mt-4 space-y-1 text-xs text-[#71717a]">
+                {notes.map((note) => (
+                  <p key={note}>{note}</p>
+                ))}
+                {sources.some((s) => s.state !== 'ok') && (
+                  <ul>
+                    {sources.filter((s) => s.state !== 'ok').map((s) => (
+                      <li key={s.name}>{s.name}: {s.message}</li>
+                    ))}
+                  </ul>
+                )}
+                {relatedTitles.length > 0 && <p>Related titles searched: {relatedTitles.join(', ')}</p>}
+                {credited.length > 0 && (
+                  <p>
+                    Some listings provided by{' '}
+                    {credited.map((s, i) => (
+                      <React.Fragment key={s.name}>
+                        {i > 0 && ' and '}
+                        <a href={s.attributionUrl} target="_blank" rel="noopener" className="underline">{s.name}</a>
+                      </React.Fragment>
+                    ))}
+                    .
+                  </p>
+                )}
               </div>
             )}
           </section>

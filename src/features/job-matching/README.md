@@ -4,7 +4,7 @@ Branch: `feature/job-matching`
 
 Finds real listings on public job feeds, filters them, removes duplicates, and ranks them against a resume. It needs no API keys or accounts. If a source fails or finds nothing, the response says so. Sample listings are never shown as real.
 
-The page is at `/search`, with two modes: **AI Resume Matches** uses an uploaded PDF, and **Explore All Jobs** needs no resume.
+The home page has two modes: **AI Resume Matches** uses an uploaded PDF, and **Explore All Jobs** needs no resume.
 
 ## Using the API
 
@@ -23,12 +23,12 @@ The page is at `/search`, with two modes: **AI Resume Matches** uses an uploaded
 }
 ```
 
-`POST /api/resume/analyze` takes a PDF as a form field named `file` and returns a `ResumeAnalysis`. It's rule-based and uses no AI service. The file is never stored.
+Resume reading is covered in `src/features/resume-analysis/README.md`. Its `matchingResume` field is what goes in `resume` here.
 
 Any page using these must:
 
 - Show each source's `message`, so a failed source is never mistaken for no jobs.
-- Credit and link to each source that has an `attributionUrl`. Jobicy requires this.
+- Credit and link to each source that has an `attributionUrl`. Jobicy and Remote OK require this.
 - Label skills in `skillsTypicalForRole` as typical for the role.
 
 ## Job sources
@@ -40,8 +40,9 @@ Any page using these must:
 | Ashby boards | It publishes no `robots.txt` rules for this API |
 | The Muse | `robots.txt` allows its public jobs API |
 | Jobicy | `robots.txt` allows its API, and it asks for credit and a link |
+| Remote OK | `robots.txt` allows it, and its terms ask for credit and a followed link |
 
-**Not used, because `robots.txt` blocks automated access:** SmartRecruiters' API, Remotive's API, and the USAJOBS API. Don't work around these. Sites like Indeed and LinkedIn aren't used either.
+**Not used, because `robots.txt` blocks automated access:** SmartRecruiters' API, Remotive's API, and the USAJOBS API. Arbeitnow is allowed but mostly lists European jobs, so it isn't used. Don't work around these. Sites like Indeed and LinkedIn aren't used either.
 
 Every request checks `robots.txt` first, so a site that starts blocking access is skipped and reported on its own.
 
@@ -73,4 +74,4 @@ The score estimates how well a resume fits a posting's stated qualifications. It
 - **No government feed.** The USAJOBS API is blocked by `robots.txt` and needs a key, so Government results are rare.
 - **Distance is approximate.** Sources don't give coordinates, so a distance filter shows the same city, the same state, or remote.
 - **Listing age.** Listings from The Muse and Jobicy older than 90 days are hidden. Listings on live employer boards are hidden after a year, since older ones tend to be standing ads.
-- **Resume reading** is rule-based, so unusual layouts can be misread and scanned PDFs can't be read. People can edit the skills it finds.
+- **Resume reading** is rule-based by default, so unusual layouts can be misread and scanned PDFs can't be read. People can edit the skills it finds.

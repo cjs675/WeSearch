@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react'
 import type { Resume, Skill } from '@/types'
+import type { AnalysisResult } from '@/features/resume-analysis/types'
 import { Sparkles, FileText, Plus, X, Upload } from 'lucide-react'
 
 interface ResumeUploaderProps {
@@ -14,28 +15,39 @@ export function ResumeUploader({ resume, onResumeChange }: ResumeUploaderProps) 
   const [pasteText, setPasteText] = useState('')
   const [newSkill, setNewSkill] = useState('')
   const [isAnalyzing, setIsAnalyzing] = useState(false)
+  const [analysis, setAnalysis] = useState<AnalysisResult | null>(null)
+  const [error, setError] = useState('')
 
-  const handleAnalyze = async () => {
-    if (!pasteText.trim()) return
+  const analyze = async (init: RequestInit) => {
     setIsAnalyzing(true)
+    setError('')
     try {
-      const res = await fetch('/api/resume/analyze', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: pasteText }),
-      })
+      const res = await fetch('/api/resume/analyze', { method: 'POST', ...init })
+      const data = await res.json()
       if (res.ok) {
-        const data = await res.json()
-        if (data.resume) {
-          onResumeChange(data.resume)
-          setIsOpen(false)
-        }
+        setAnalysis(data)
+        onResumeChange(data.matchingResume)
+        setIsOpen(false)
+      } else {
+        setError(data.error?.message ?? 'That resume could not be read.')
       }
-    } catch (err) {
-      console.error('Failed to parse resume:', err)
+    } catch {
+      setError('That resume could not be read. Please try again.')
     } finally {
       setIsAnalyzing(false)
     }
+  }
+
+  const handleAnalyze = () => {
+    if (!pasteText.trim()) return
+    analyze({ headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: pasteText }) })
+  }
+
+  const handleFile = (file: File | undefined) => {
+    if (!file) return
+    const form = new FormData()
+    form.append('file', file)
+    analyze({ body: form })
   }
 
   const handleLoadSample = (type: 'frontend' | 'designer') => {
@@ -139,7 +151,7 @@ export function ResumeUploader({ resume, onResumeChange }: ResumeUploaderProps) 
           <p className="mt-1 text-xs text-[#71717a]">
             {resume && resume.skills.length > 0
               ? `${resume.skills.length} skills active for personalized fit scoring.`
-              : 'Add skills or paste your background to rank listings by compatibility.'}
+              : 'Upload your resume as a PDF, paste it, or add skills to rank listings by fit.'}
           </p>
         </div>
 
@@ -162,6 +174,19 @@ export function ResumeUploader({ resume, onResumeChange }: ResumeUploaderProps) 
               </button>
             </>
           )}
+
+          <label className="flex cursor-pointer items-center gap-1.5 rounded-lg bg-[#18181b] px-3 py-1.5 text-xs font-medium text-white transition hover:bg-[#3f3f46]">
+            <FileText className="size-3.5" />
+            {isAnalyzing ? 'Reading...' : 'Upload PDF'}
+            <input
+              type="file"
+              accept="application/pdf"
+              aria-label="Upload resume PDF"
+              className="sr-only"
+              disabled={isAnalyzing}
+              onChange={(e) => handleFile(e.target.files?.[0])}
+            />
+          </label>
 
           <button
             type="button"
@@ -199,10 +224,36 @@ export function ResumeUploader({ resume, onResumeChange }: ResumeUploaderProps) 
         </div>
       )}
 
-      {resume && resume.skills.length > 0 && (
+      {error && (
+        <p role="alert" className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-900">
+          {error}
+        </p>
+      )}
+
+      {analysis && resume && (
+        <dl className="mt-4 space-y-1.5 border-t border-[#dededb] pt-4 text-xs text-[#71717a]">
+          {[
+            ['Work experience', resume.experience.map((e) => (e.employer ? `${e.title}, ${e.employer}` : e.title))],
+            ['Education', resume.education.map((e) => [e.field, e.institution, e.inProgress ? 'in progress' : null].filter(Boolean).join(', '))],
+            ['Certifications', resume.certifications],
+            ['Projects', (resume.projects ?? []).map((p) => p.slice(0, 80))],
+            ['Transferable skills', analysis.skills.transferable.map((t) => t.name)],
+            ['Suggested categories', (resume.suggestedCategories ?? []).slice(0, 6)],
+            ['Notes', analysis.meta.warnings],
+          ].filter(([, items]) => items.length > 0).map(([title, items]) => (
+            <div key={title as string}>
+              <dt className="inline font-medium text-[#18181b]">{title}: </dt>
+              <dd className="inline">{(items as string[]).join('; ')}</dd>
+            </div>
+          ))}
+          <p className="pt-1">Please check this. You can also search any category, even one your resume doesn&apos;t suggest.</p>
+        </dl>
+      )}
+
+      {(
         <div className="mt-4 flex flex-wrap items-center gap-1.5 border-t border-[#dededb] pt-4">
-          <span className="text-[11px] font-medium text-[#71717a] mr-1">Active skills:</span>
-          {resume.skills.map((skill) => (
+          <span className="text-[11px] font-medium text-[#71717a] mr-1">{resume?.skills.length ? 'Active skills:' : 'Skills:'}</span>
+          {resume?.skills.map((skill) => (
             <span
               key={skill.name}
               className="inline-flex items-center gap-1 rounded-md border border-[#dededb] bg-white px-2 py-1 text-xs text-[#18181b]"

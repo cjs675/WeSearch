@@ -13,9 +13,9 @@ import { detectJobType, detectRemote, isUsLocation, parseSalaryText } from "./so
 import { parseJobicy } from "./sources/jobicy";
 import { parseLever } from "./sources/lever";
 import { parseMuse } from "./sources/muse";
+import { parseRemoteOk } from "./sources/remoteok";
 import { type JobSource, type SourceJob, SourceUnavailable } from "./sources/types";
 import { stripHtml } from "./text";
-import { analyzeResumeText, parseResumeText } from "../resume-analysis/parser";
 
 function job(title: string, employer = "Acme", description = "", extra: Partial<SourceJob> = {}): SourceJob {
   const base: SourceJob = {
@@ -60,6 +60,12 @@ describe("categories", () => {
     expect(has(job("Treasury Sales Associate I"), "Retail")).toBe(false);
     expect(has(job("Enterprise Sales Leader, Retail"), "Retail")).toBe(false);
     expect(has(job("Teller", "U.S. Bank"), "Government")).toBe(false);
+    expect(has(job("Federal Sales Manager"), "Government")).toBe(false);
+    expect(has(job("Senior Product Manager, Security"), "Security")).toBe(false);
+    expect(has(job("Higher Education Enterprise Sales"), "Education")).toBe(false);
+    expect(has(job("Healthcare Provider Account Manager"), "Healthcare")).toBe(false);
+    expect(has(job("Senior Data Scientist, Delivery"), "Delivery")).toBe(false);
+    expect(has(job("Senior Data Scientist, Guest & Host"), "Restaurants")).toBe(false);
   });
   it("ignores a mention that's only in the description", () => {
     expect(has(job("Accountant", "Acme", "Clients in the fast food industry."), "Fast Food")).toBe(false);
@@ -197,6 +203,22 @@ describe("required behavior", () => {
   it("suggests retail, hospitality and customer service to a fast-food worker", () => {
     expect(suggestedCategories(buildProfile(FAST_FOOD))).toEqual(expect.arrayContaining(["Fast Food", "Retail", "Hospitality", "Customer Service"]));
   });
+  it("shows a fast-food worker other kinds of work, not one employer's many openings", async () => {
+    const insomnia = Array.from({ length: 150 }, (_, i) => job("Cookie Crew", "Insomnia Cookies", "", { location: `Town ${i}, OH`, applyUrl: `https://example.test/${i}` }));
+    const others = [job("Retail Cashier", "Acme"), job("Hotel Front Desk Agent", "Inn Co"), job("Customer Service Representative", "Call Co")];
+    const out = await searchJobs(request(), FAST_FOOD, [fake([...insomnia, ...others])]);
+    expect(out.total).toBe(153);
+    expect(out.matches).toHaveLength(100);
+    const employers = out.matches.map((m) => m.job.employer);
+    for (const employer of ["Acme", "Inn Co", "Call Co"]) expect(employers).toContain(employer);
+  });
+  it("keeps strict ranking when a category is chosen", async () => {
+    const jobs = Array.from({ length: 12 }, (_, i) => job("Cookie Crew", "Insomnia Cookies", "", { location: `Town ${i}, OH`, applyUrl: `https://example.test/${i}` }));
+    const lower = job("Fast Food Cook", "Other Co", "", { location: "Town, OH" });
+    const out = await searchJobs(request({ categories: ["Fast Food"] }), FAST_FOOD, [fake([...jobs, lower])]);
+    const scores = out.matches.map((m) => m.compatibility?.score ?? 0);
+    expect(scores).toEqual([...scores].sort((a, b) => b - a));
+  });
   it("gives a student with no experience entry-level jobs only", async () => {
     const source = fake([job("Marketing Intern"), job("Retail Store Manager"), job("Retail Associate", "Acme", "5 years of experience required.")]);
     const out = await searchJobs(request(), STUDENT, [source]);
@@ -287,6 +309,14 @@ describe("sources", () => {
     expect(parseJobicy({ ...base, salaryCurrency: "USD" })?.salary?.min).toBe(36000);
     expect(parseJobicy({ ...base, salaryCurrency: "EUR" })?.salary).toBeNull();
   });
+  it("reads a Remote OK listing, treating zero pay as not stated", () => {
+    const j = parseRemoteOk({ id: "1", position: "Support Agent", company: "X", location: "Colorado", url: "https://remoteok.com/remote-jobs/1", date: "2026-11-01T08:00:12+00:00", description: "<p>Help</p>", salary_min: 0, salary_max: 0 });
+    expect(j?.remote).toBe(true);
+    expect(j?.salary).toBeNull();
+    expect(j?.description).toBe("Help");
+    expect(parseRemoteOk({ id: "2", position: "Agent", company: "X", location: "Germany", url: "https://remoteok.com/remote-jobs/2" })).toBeNull();
+    expect(parseRemoteOk({ last_updated: 1, legal: "terms" })).toBeNull();
+  });
   it("drops a listing whose link isn't http or https", () => {
     expect(parseMuse({ id: "1", name: "Cashier", refs: { landing_page: "javascript:alert(1)" } })).toBeNull();
     expect(parseJobicy({ id: "1", jobTitle: "Cashier", url: "not a link" })).toBeNull();
@@ -310,7 +340,7 @@ describe("sources", () => {
     expect(detectRemote("Agent", "Chicago", "This is not remote.")).toBe(false);
   });
   it("uses only sources that allow automated access", () => {
-    expect(SOURCES.map((s) => s.name)).toEqual(["Greenhouse employer boards", "Lever employer boards", "Ashby employer boards", "The Muse", "Jobicy"]);
+    expect(SOURCES.map((s) => s.name)).toEqual(["Greenhouse employer boards", "Lever employer boards", "Ashby employer boards", "The Muse", "Jobicy", "Remote OK"]);
   });
   it("keeps other sources' results when one fails", async () => {
     const { jobs, statuses } = await fetchAll([], request(), [fake([], "could not reach it"), fake([job("Cashier")])]);
@@ -362,33 +392,5 @@ describe("polite fetching", () => {
   it("skips a source when robots.txt can't be checked", async () => {
     stub(() => new Response("oops", { status: 503 }));
     await expect(getJson(`${host()}/jobs`)).rejects.toThrow("couldn't be checked");
-  });
-});
-
-describe("resume reading", () => {
-  const TEXT = ["Experience", "Crew Member, McDonald's 2022-2024", "- Handled cash and served customers", "Education", "Bachelor of Science in Biology", "Lincoln University, expected 2027", "Skills", "Teamwork, Spanish, Basket Weaving", "Projects", "Inventory tracker in Python", "Certifications", "CPR"].join("\n");
-  it("extracts each section", () => {
-    const r = parseResumeText(TEXT);
-    expect(r.experience[0]).toMatchObject({ title: "Crew Member", employer: "McDonald's", years: 2 });
-    expect(r.education[0]).toMatchObject({ level: "bachelor", inProgress: true });
-    expect(r.isStudent).toBe(true);
-    expect(r.projects).toEqual(["Inventory tracker in Python"]);
-    expect(r.certifications).toEqual(["CPR"]);
-    expect(r.education[0].institution).toBe("Lincoln University");
-    expect(r.skills.map((s) => s.name)).toEqual(expect.arrayContaining(["teamwork", "bilingual", "Basket Weaving"]));
-  });
-  it("suggests related categories and transferable skills", () => {
-    const a = analyzeResumeText(TEXT);
-    expect(a.suggestedCategories).toEqual(expect.arrayContaining(["Fast Food", "Retail", "Hospitality", "Customer Service"]));
-    expect(a.transferableSkills.length).toBeGreaterThan(0);
-  });
-  it("handles an applicant with no work history", () => {
-    const r = parseResumeText("Education\nHigh school student, expected graduation 2027\nNo work experience");
-    expect(r.experience).toEqual([]);
-    expect(r.isStudent).toBe(true);
-    expect(suggestedCategories(buildProfile(r))).toEqual(expect.arrayContaining(["Internships", "Entry-Level"]));
-  });
-  it("invents nothing from empty text", () => {
-    expect(parseResumeText("")).toMatchObject({ skills: [], experience: [], education: [], certifications: [], isStudent: false });
   });
 });

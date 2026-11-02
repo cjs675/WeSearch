@@ -125,7 +125,11 @@
         "financial",
         "mortgage",
         "insurance",
-        "wealth"
+        "wealth",
+        "senior manager",
+        "strategy",
+        "analyst",
+        "marketing"
       ],
       "employers": [
         "walmart",
@@ -182,7 +186,13 @@
         "developer",
         "software",
         "architect",
-        "sql"
+        "sql",
+        "data",
+        "scientist",
+        "analyst",
+        "product",
+        "marketing",
+        "recruiter"
       ]
     },
     "Warehouse": {
@@ -333,6 +343,15 @@
         "Medical Assistant",
         "Patient Care Technician",
         "Pharmacy Technician"
+      ],
+      "exclude": [
+        "sales",
+        "account manager",
+        "business development",
+        "marketing",
+        "recruiter",
+        "engineer",
+        "software"
       ]
     },
     "Security": {
@@ -365,7 +384,9 @@
         "information",
         "cloud",
         "network",
-        "account executive"
+        "account executive",
+        "product",
+        "marketing"
       ]
     },
     "Skilled Trades": {
@@ -450,6 +471,14 @@
         "state of",
         "department of",
         "us department"
+      ],
+      "exclude": [
+        "sales",
+        "account",
+        "business development",
+        "contracts",
+        "marketing",
+        "partnerships"
       ]
     },
     "Education": {
@@ -476,6 +505,12 @@
         "Teaching Assistant",
         "Substitute Teacher",
         "Childcare Worker"
+      ],
+      "exclude": [
+        "sales",
+        "enterprise",
+        "account",
+        "marketing"
       ]
     },
     "Hospitality": {
@@ -540,7 +575,11 @@
         "director",
         "lead",
         "program",
-        "service delivery"
+        "service delivery",
+        "data",
+        "scientist",
+        "analyst",
+        "marketing"
       ]
     },
     "Entry-Level": {

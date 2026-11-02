@@ -4,10 +4,11 @@ import { greenhouse } from "./greenhouse";
 import { jobicy } from "./jobicy";
 import { lever } from "./lever";
 import { theMuse } from "./muse";
+import { remoteOk } from "./remoteok";
 import { type JobSource, type SourceJob, SourceUnavailable } from "./types";
 
 /** Every job website in use. Remove one from this list and the rest keep working. */
-export const SOURCES: JobSource[] = [greenhouse, lever, ashby, theMuse, jobicy];
+export const SOURCES: JobSource[] = [greenhouse, lever, ashby, theMuse, jobicy, remoteOk];
 
 /** Ask every source at once. Returns the listings and one status per source, including failures. */
 export async function fetchAll(categories: JobCategory[], request: JobSearchRequest, sources: JobSource[] = SOURCES) {

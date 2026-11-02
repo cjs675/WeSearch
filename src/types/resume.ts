@@ -1,4 +1,3 @@
-import type { TransferableSkill } from "./compatibility";
 import type { JobCategory } from "./job-category";
 import type { Skill } from "./skill";
 
@@ -29,11 +28,6 @@ export interface Resume {
   projects?: string[];
   /** Terms from the resume that help find relevant jobs. */
   keywords?: string[];
-}
-
-/** What resume analysis returns: the resume plus what was worked out from it. */
-export interface ResumeAnalysis {
-  resume: Resume;
-  transferableSkills: TransferableSkill[];
-  suggestedCategories: JobCategory[];
+  /** Categories the resume analysis points to, searched after those worked out from past roles. */
+  suggestedCategories?: JobCategory[];
 }

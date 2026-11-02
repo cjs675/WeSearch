@@ -1,16 +1,32 @@
 'use client'
 
 import React, { useState } from 'react'
-import type { JobMatch } from '@/types'
+import type { JobMatch, Salary } from '@/types'
 import { ArrowUpRight, ChevronDown, ChevronUp, MapPin, Building2, CheckCircle2, AlertCircle } from 'lucide-react'
 
 interface JobCardProps {
   match: JobMatch
 }
 
+const QUALIFICATION_LABELS = {
+  met: 'You have this',
+  missing: 'Missing',
+  in_progress: 'In progress',
+  check_yourself: 'Check this yourself',
+}
+
+function payText(salary: Salary): string {
+  if (salary.text) return salary.text
+  const range = [salary.min, salary.max].filter((n): n is number => Boolean(n))
+  return range.map((n) => `$${Math.round(n).toLocaleString('en-US')}`).join(' - ') + ' a year'
+}
+
 export function JobCard({ match }: JobCardProps) {
   const { job, compatibility } = match
   const [expanded, setExpanded] = useState(false)
+  const typical = new Set(compatibility?.skillsTypicalForRole ?? [])
+  const label = (skill: string) => (typical.has(skill) ? `${skill} (typical for this role)` : skill)
+  const qualifications = compatibility?.qualifications ?? []
 
   const initial = (job.employer || job.title).charAt(0).toUpperCase()
 
@@ -50,11 +66,12 @@ export function JobCard({ match }: JobCardProps) {
                 </span>
               )}
               {job.salary && (
-                <span className="text-[#52525b]">
-                  ${job.salary.min ? job.salary.min.toLocaleString() : ''}
-                  {job.salary.max ? ` - $${job.salary.max.toLocaleString()}` : ''}
-                </span>
+                <span className="text-[#52525b]">{payText(job.salary)}</span>
               )}
+              <span className="text-[#a1a1aa]">
+                {job.postedAt ? `Posted ${job.postedAt.slice(0, 10)}` : 'Posting date not given'}
+              </span>
+              {match.entryLevel && <span className="text-[#52525b]">Entry-level friendly</span>}
               <span className="text-[10px] text-[#c4c4c0]">via {job.sources.join(', ')}</span>
             </div>
           </div>
@@ -63,7 +80,7 @@ export function JobCard({ match }: JobCardProps) {
         <div className="flex items-center gap-3 self-end sm:self-auto">
           {compatibility ? (
             <div className="flex items-center gap-1 rounded-full border border-[#dededb] bg-white px-3 py-1 text-xs shadow-sm">
-              <span className="text-[#a1a1aa]">fit</span>
+              <span className="text-[#a1a1aa]">estimated fit</span>
               <span className="font-semibold text-[#18181b]">{compatibility.score}%</span>
             </div>
           ) : (
@@ -110,6 +127,13 @@ export function JobCard({ match }: JobCardProps) {
         </div>
       )}
 
+      {qualifications.filter((q) => q.status !== 'met').map((q) => (
+        <p key={q.label} className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-900">
+          {QUALIFICATION_LABELS[q.status]}: {q.label}
+          {q.canGetAfterHire ? ' (can be obtained after hire)' : ''}. The posting says: &ldquo;{q.evidence}&rdquo;
+        </p>
+      ))}
+
       <div className="mt-3 flex items-center justify-between border-t border-[#dededb]/60 pt-3">
         <button
           type="button"
@@ -138,7 +162,7 @@ export function JobCard({ match }: JobCardProps) {
           {compatibility && compatibility.components.length > 0 && (
             <div className="rounded-lg border border-[#dededb] bg-white p-3">
               <h4 className="font-semibold text-[#18181b] mb-2">Score Breakdown</h4>
-              <div className="grid gap-2 sm:grid-cols-3">
+              <div className="grid gap-2 sm:grid-cols-2">
                 {compatibility.components.map((c) => (
                   <div key={c.name} className="rounded bg-[#f5f5f4] p-2">
                     <div className="flex items-center justify-between font-medium text-[#18181b]">
@@ -151,6 +175,25 @@ export function JobCard({ match }: JobCardProps) {
                   </div>
                 ))}
               </div>
+              <dl className="mt-3 space-y-1.5 text-[11px] text-[#71717a]">
+                {[
+                  ['Matching skills', compatibility.matchedSkills.map(label)],
+                  ['Transferable skills', compatibility.transferableSkills.map((t) => `${t.have} counts toward ${label(t.countsToward)}`)],
+                  ['Not on your resume', compatibility.missingSkills.map(label)],
+                  ['Required qualifications found', qualifications.map((q) => `${q.label} (${QUALIFICATION_LABELS[q.status].toLowerCase()})`)],
+                  ['Relevant experience', compatibility.relevantExperience],
+                ].filter(([, items]) => items.length > 0).map(([title, items]) => (
+                  <div key={title as string}>
+                    <dt className="inline font-medium text-[#18181b]">{title}: </dt>
+                    <dd className="inline">{(items as string[]).join(', ')}</dd>
+                  </div>
+                ))}
+              </dl>
+              {job.descriptionIsPartial && (
+                <p className="mt-2 text-[11px] text-[#71717a]">
+                  Only part of this posting was available, so it may list more requirements.
+                </p>
+              )}
             </div>
           )}
 

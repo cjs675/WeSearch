@@ -69,6 +69,11 @@ for (const [label, body] of SEARCHES) {
   if (location) console.log(`  in or remote from ${location}: ${out.matches.filter((m) => m.job.remote || (m.job.location ?? "").includes(location.split(",")[0])).length} of ${out.matches.length}`);
   if (out.message) console.log(`  message: ${out.message}`);
   for (const note of out.notes) console.log(`  note: ${note}`);
+  if (body.resume && !body.categories && !body.keywords) {
+    const shown = {};
+    for (const { job } of out.matches) for (const c of job.categories) shown[c] = (shown[c] ?? 0) + 1;
+    console.log("  categories in the top results:", shown);
+  }
   for (const { job, compatibility } of out.matches.slice(0, 5)) {
     console.log(`  ${String(compatibility?.score ?? "-").padStart(3)}%  ${job.title.slice(0, 40)} | ${(job.employer ?? "?").slice(0, 18)} | ${(job.location ?? "?").slice(0, 26)} | ${(job.postedAt ?? "no date").slice(0, 10)} | ${job.sources[0].slice(0, 10)}`);
   }

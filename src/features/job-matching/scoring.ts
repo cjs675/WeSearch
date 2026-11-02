@@ -2,7 +2,7 @@ import type { CompatibilityScore, EducationLevel, Qualification, ScoreComponent,
 import { canonicalSkills, type MatchProfile } from "./profile";
 import type { SourceJob } from "./sources/types";
 import { ENTRY_LEVEL_TERMS, SENIOR_TITLE_TERMS, TRANSFERABLE_CATEGORIES, TRANSFERABLE_SKILLS, TYPICAL_SKILLS } from "./taxonomy";
-import { hasAny, norm } from "./text";
+import { hasAny, hasTerm, norm } from "./text";
 
 const SKILL_MAX = 45;
 const EXPERIENCE_MAX = 25;
@@ -24,10 +24,10 @@ const QUALIFICATIONS: { label: string; pattern: RegExp; satisfiedBy: string[] | 
   { label: "Registered nurse license", pattern: /\brn licen[sc]e|registered nurse licen[sc]e|licensed registered nurse/i, satisfiedBy: ["rn"] },
   { label: "CNA certification", pattern: /\bcna\b (?:certification|licen[sc]e)|certified nurs(?:e|ing) assistant/i, satisfiedBy: ["cna"] },
   { label: "LPN license", pattern: /\blpn licen[sc]e|licensed practical nurse/i, satisfiedBy: ["lpn"] },
-  { label: "Security guard license", pattern: /guard (?:card|licen[sc]e)|security licen[sc]e/i, satisfiedBy: ["guard card"] },
+  { label: "Security guard license", pattern: /guard (?:card|licen[sc]e)|security licen[sc]e/i, satisfiedBy: ["guard card", "security license", "security officer license"] },
   { label: "CPR / first aid certification", pattern: /\bcpr\b|\bbls\b certif/i, satisfiedBy: ["cpr"] },
   { label: "Food handler card", pattern: /food handler|servsafe/i, satisfiedBy: ["food handler", "servsafe"] },
-  { label: "Forklift certification", pattern: /forklift certif|certified forklift/i, satisfiedBy: ["forklift certified"] },
+  { label: "Forklift certification", pattern: /forklift certif|certified forklift/i, satisfiedBy: ["forklift"] },
   { label: "Security clearance", pattern: /security clearance|secret clearance/i, satisfiedBy: null },
   { label: "Work authorization", pattern: /authorized to work|work authorization|u\.?s\.? citizen/i, satisfiedBy: null },
   { label: "Minimum age", pattern: /\b(?:1[6-9]|21) years? of age|at least (?:1[6-9]|21)\b/i, satisfiedBy: null },
@@ -82,7 +82,7 @@ export function extractQualifications(job: SourceJob, profile: MatchProfile): Qu
     const evidence = sentence.slice(0, 180);
     for (const { label, pattern, satisfiedBy } of QUALIFICATIONS) {
       if (!pattern.test(sentence)) continue;
-      const status = satisfiedBy === null ? "check_yourself" : satisfiedBy.some((c) => profile.certifications.includes(c)) ? "met" : "missing";
+      const status = satisfiedBy === null ? "check_yourself" : satisfiedBy.some((c) => profile.certifications.some((held) => hasTerm(held, c))) ? "met" : "missing";
       add({ label, status, evidence, canGetAfterHire });
     }
     const degree = DEGREES.find((d) => d.pattern.test(sentence));
