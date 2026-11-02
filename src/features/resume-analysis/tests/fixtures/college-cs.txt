@@ -1,0 +1,29 @@
+Alex Chen
+alex.chen@university.edu | (813) 555-0101 | linkedin.com/in/alexchen | github.com/alexchen
+Tampa, FL
+
+EDUCATION
+University of South Florida, Tampa, FL                       Expected May 2028
+Bachelor of Science in Computer Science
+GPA 3.5/4.0
+
+EXPERIENCE
+Software Engineering Intern | Acme Health Tech | Tampa, FL     Jun 2025 - Aug 2025
+• Built internal dashboards in React and TypeScript used by 40 staff
+• Wrote Python scripts to clean patient scheduling data in PostgreSQL
+• Collaborated with a team of 5 engineers using Git and code reviews
+
+IT Help Desk Assistant, USF Information Technology, Tampa, FL     Sep 2024 – Present
+• Troubleshoot hardware and software issues for students and faculty
+• Answered phone calls and resolved tickets within 24 hours
+
+PROJECTS
+Campus Food Finder
+• Web app built with JavaScript, HTML and CSS that maps open dining halls
+
+TECHNICAL SKILLS
+Languages: Python, Java, JavaScript, TypeScript, SQL
+Tools: Git, Docker, Linux, Excel
+
+RELEVANT COURSEWORK
+Data Structures, Operating Systems, Databases
