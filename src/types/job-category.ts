@@ -5,6 +5,7 @@ export const JOB_CATEGORIES = [
   "Warehouse",
   "Customer Service",
   "Internships",
+  "Entry-Level",
   "Office",
   "Healthcare",
   "Security",

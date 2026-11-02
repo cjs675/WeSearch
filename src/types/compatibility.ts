@@ -27,7 +27,7 @@ export interface Qualification {
 }
 
 export interface CompatibilityScore {
-  /** 0 to 100. Always the sum of the components' points. */
+  /** Estimated qualification fit from 0 to 100, not a chance of being hired. Always the sum of the components' points. */
   score: number;
   components: ScoreComponent[];
   matchedSkills: string[];
@@ -36,6 +36,8 @@ export interface CompatibilityScore {
   /** Skills scored because they're usual for the role, not because the posting states them. Label these on screen. */
   skillsTypicalForRole: string[];
   qualifications: Qualification[];
+  /** Past roles and projects from the resume that relate to this job. */
+  relevantExperience: string[];
 }
 
 export interface JobMatch {

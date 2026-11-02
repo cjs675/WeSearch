@@ -3,10 +3,10 @@ import type { JobCategory } from "./job-category";
 export type JobType = "full_time" | "part_time" | "contract" | "temporary" | "internship";
 
 export interface Salary {
-  /** Yearly amounts in US dollars. */
+  /** Yearly amounts in US dollars. Hourly pay assumes full-time hours, so show `text` when there is one. */
   min?: number;
   max?: number;
-  /** Pay as the source wrote it, when it can't be read as yearly numbers. */
+  /** Pay as the source states it, like "$18 an hour". */
   text?: string;
   /** True when the job board estimated the pay and the employer didn't state it. */
   estimated: boolean;
