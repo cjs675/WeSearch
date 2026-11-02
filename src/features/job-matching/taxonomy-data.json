@@ -1,0 +1,1206 @@
+{
+  "categories": {
+    "Fast Food": {
+      "titles": [
+        "fast food",
+        "quick service",
+        "qsr",
+        "drive thru",
+        "fry cook",
+        "burger",
+        "pizza maker"
+      ],
+      "queries": [
+        "fast food",
+        "crew member restaurant",
+        "quick service restaurant"
+      ],
+      "titlesToTry": [
+        "Crew Member",
+        "Fast Food Team Member",
+        "Drive-Thru Attendant",
+        "Shift Leader"
+      ],
+      "employers": [
+        "mcdonalds",
+        "burger king",
+        "wendys",
+        "taco bell",
+        "kfc",
+        "subway",
+        "chick fil a",
+        "chipotle",
+        "popeyes",
+        "sonic drive in",
+        "arbys",
+        "dunkin",
+        "dominos",
+        "pizza hut",
+        "papa johns",
+        "panda express",
+        "five guys",
+        "jack in the box",
+        "whataburger",
+        "dairy queen",
+        "little caesars",
+        "culvers",
+        "in n out",
+        "shake shack",
+        "raising canes",
+        "wingstop",
+        "panera",
+        "starbucks",
+        "hardees",
+        "carls jr"
+      ],
+      "contextTitles": {
+        "titles": [
+          "crew member",
+          "team member",
+          "crew",
+          "shift leader",
+          "shift manager"
+        ],
+        "context": [
+          "restaurant",
+          "fast food",
+          "quick service",
+          "food"
+        ]
+      }
+    },
+    "Retail": {
+      "titles": [
+        "retail",
+        "cashier",
+        "sales associate",
+        "store associate",
+        "merchandiser",
+        "stock associate",
+        "store manager",
+        "assistant store manager",
+        "front end associate",
+        "sales floor",
+        "stocker"
+      ],
+      "queries": [
+        "cashier",
+        "retail sales associate",
+        "retail"
+      ],
+      "titlesToTry": [
+        "Cashier",
+        "Retail Sales Associate",
+        "Stock Associate",
+        "Front End Associate"
+      ],
+      "exclude": [
+        "enterprise",
+        "account executive",
+        "software",
+        "engineer",
+        "treasury",
+        "commercial",
+        "equipment",
+        "payments",
+        "banking",
+        "financial",
+        "mortgage",
+        "insurance",
+        "wealth"
+      ],
+      "employers": [
+        "walmart",
+        "target",
+        "costco",
+        "kroger",
+        "cvs",
+        "walgreens",
+        "home depot",
+        "lowes",
+        "best buy",
+        "meijer",
+        "aldi",
+        "publix",
+        "dollar general",
+        "dollar tree",
+        "safeway",
+        "albertsons"
+      ]
+    },
+    "Restaurants": {
+      "titles": [
+        "restaurant",
+        "server",
+        "waiter",
+        "waitress",
+        "host",
+        "hostess",
+        "line cook",
+        "cook",
+        "dishwasher",
+        "busser",
+        "bartender",
+        "barista",
+        "food runner",
+        "prep cook",
+        "food service"
+      ],
+      "queries": [
+        "restaurant server",
+        "line cook",
+        "restaurant host"
+      ],
+      "titlesToTry": [
+        "Server",
+        "Host",
+        "Line Cook",
+        "Dishwasher",
+        "Food Runner"
+      ],
+      "exclude": [
+        "engineer",
+        "administrator",
+        "developer",
+        "software",
+        "architect",
+        "sql"
+      ]
+    },
+    "Warehouse": {
+      "titles": [
+        "warehouse",
+        "forklift",
+        "picker",
+        "packer",
+        "material handler",
+        "fulfillment associate",
+        "shipping and receiving",
+        "inventory associate",
+        "order selector",
+        "loader",
+        "unloader"
+      ],
+      "queries": [
+        "warehouse associate",
+        "picker packer",
+        "material handler"
+      ],
+      "titlesToTry": [
+        "Warehouse Associate",
+        "Picker Packer",
+        "Material Handler"
+      ]
+    },
+    "Customer Service": {
+      "titles": [
+        "customer service",
+        "customer support",
+        "call center",
+        "client service",
+        "customer care",
+        "guest service",
+        "member service",
+        "customer success",
+        "support representative"
+      ],
+      "queries": [
+        "customer service representative",
+        "call center",
+        "customer support"
+      ],
+      "titlesToTry": [
+        "Customer Service Representative",
+        "Call Center Agent",
+        "Guest Services Associate"
+      ]
+    },
+    "Internships": {
+      "titles": [
+        "intern",
+        "internship",
+        "co op",
+        "apprentice",
+        "apprenticeship",
+        "summer analyst"
+      ],
+      "queries": [
+        "internship",
+        "paid internship",
+        "student intern"
+      ],
+      "titlesToTry": [
+        "Intern",
+        "Summer Intern",
+        "Student Intern",
+        "Apprentice"
+      ],
+      "exclude": [
+        "internal"
+      ]
+    },
+    "Office": {
+      "titles": [
+        "office assistant",
+        "office manager",
+        "administrative assistant",
+        "receptionist",
+        "data entry",
+        "office clerk",
+        "administrative coordinator",
+        "front desk coordinator",
+        "secretary",
+        "file clerk"
+      ],
+      "queries": [
+        "administrative assistant",
+        "office assistant",
+        "receptionist"
+      ],
+      "titlesToTry": [
+        "Office Assistant",
+        "Receptionist",
+        "Data Entry Clerk",
+        "Administrative Assistant"
+      ]
+    },
+    "Healthcare": {
+      "titles": [
+        "nurse",
+        "nursing",
+        "cna",
+        "caregiver",
+        "medical assistant",
+        "home health",
+        "phlebotomist",
+        "pharmacy technician",
+        "dental assistant",
+        "patient care",
+        "physician",
+        "therapist",
+        "hospital",
+        "rn",
+        "lpn",
+        "medical receptionist",
+        "healthcare"
+      ],
+      "queries": [
+        "caregiver",
+        "medical assistant",
+        "nursing assistant"
+      ],
+      "titlesToTry": [
+        "Caregiver",
+        "Medical Assistant",
+        "Patient Care Technician",
+        "Pharmacy Technician"
+      ]
+    },
+    "Security": {
+      "titles": [
+        "security guard",
+        "security officer",
+        "security",
+        "loss prevention",
+        "store detective",
+        "patrol officer"
+      ],
+      "queries": [
+        "security guard",
+        "security officer",
+        "loss prevention"
+      ],
+      "titlesToTry": [
+        "Security Guard",
+        "Security Officer",
+        "Loss Prevention Associate"
+      ],
+      "exclude": [
+        "engineer",
+        "analyst",
+        "software",
+        "cyber",
+        "architect",
+        "developer",
+        "sales",
+        "information",
+        "cloud",
+        "network",
+        "account executive"
+      ]
+    },
+    "Skilled Trades": {
+      "titles": [
+        "electrician",
+        "plumber",
+        "hvac",
+        "welder",
+        "carpenter",
+        "mechanic",
+        "maintenance technician",
+        "machinist",
+        "pipefitter",
+        "millwright",
+        "roofer",
+        "construction laborer",
+        "lineman"
+      ],
+      "queries": [
+        "electrician apprentice",
+        "hvac technician",
+        "maintenance technician"
+      ],
+      "titlesToTry": [
+        "Maintenance Technician",
+        "Electrician Apprentice",
+        "HVAC Technician",
+        "Welder"
+      ]
+    },
+    "Technology": {
+      "titles": [
+        "software",
+        "developer",
+        "programmer",
+        "it support",
+        "help desk",
+        "data analyst",
+        "web developer",
+        "cybersecurity",
+        "devops",
+        "qa engineer",
+        "systems administrator",
+        "network engineer",
+        "data engineer",
+        "machine learning",
+        "full stack",
+        "frontend",
+        "backend"
+      ],
+      "queries": [
+        "software developer",
+        "it support",
+        "data analyst"
+      ],
+      "titlesToTry": [
+        "Junior Software Developer",
+        "IT Support Specialist",
+        "Help Desk Technician"
+      ]
+    },
+    "Government": {
+      "titles": [
+        "federal",
+        "government",
+        "public service",
+        "municipal"
+      ],
+      "queries": [
+        "government",
+        "city of",
+        "public service"
+      ],
+      "titlesToTry": [
+        "Program Assistant",
+        "Administrative Support Assistant",
+        "Public Service Aide"
+      ],
+      "employers": [
+        "city of",
+        "county of",
+        "state of",
+        "department of",
+        "us department"
+      ]
+    },
+    "Education": {
+      "titles": [
+        "teacher",
+        "tutor",
+        "teaching assistant",
+        "paraprofessional",
+        "instructor",
+        "school",
+        "professor",
+        "substitute teacher",
+        "education",
+        "childcare",
+        "preschool"
+      ],
+      "queries": [
+        "teacher assistant",
+        "tutor",
+        "substitute teacher"
+      ],
+      "titlesToTry": [
+        "Tutor",
+        "Teaching Assistant",
+        "Substitute Teacher",
+        "Childcare Worker"
+      ]
+    },
+    "Hospitality": {
+      "titles": [
+        "hospitality",
+        "hotel",
+        "housekeeper",
+        "housekeeping",
+        "front desk agent",
+        "concierge",
+        "banquet",
+        "guest service",
+        "bellhop",
+        "resort",
+        "front desk"
+      ],
+      "queries": [
+        "hotel front desk",
+        "housekeeper",
+        "hospitality"
+      ],
+      "titlesToTry": [
+        "Hotel Front Desk Agent",
+        "Housekeeper",
+        "Banquet Server",
+        "Guest Services Agent"
+      ],
+      "employers": [
+        "marriott",
+        "hilton",
+        "hyatt",
+        "wyndham",
+        "ihg",
+        "best western"
+      ]
+    },
+    "Delivery": {
+      "titles": [
+        "delivery driver",
+        "courier",
+        "delivery associate",
+        "package handler",
+        "route driver",
+        "delivery",
+        "driver helper"
+      ],
+      "queries": [
+        "delivery driver",
+        "courier",
+        "package handler"
+      ],
+      "titlesToTry": [
+        "Delivery Driver",
+        "Courier",
+        "Package Handler"
+      ],
+      "exclude": [
+        "manager",
+        "software",
+        "engineer",
+        "director",
+        "lead",
+        "program",
+        "service delivery"
+      ]
+    }
+  },
+  "adzunaLabels": {
+    "retail-jobs": "Retail",
+    "customer-services-jobs": "Customer Service",
+    "hospitality-catering-jobs": "Hospitality",
+    "healthcare-nursing-jobs": "Healthcare",
+    "it-jobs": "Technology",
+    "teaching-jobs": "Education",
+    "trade-construction-jobs": "Skilled Trades",
+    "logistics-warehouse-jobs": "Warehouse",
+    "admin-jobs": "Office"
+  },
+  "museCategories": {
+    "Retail": [
+      "Retail"
+    ],
+    "Customer Service": [
+      "Customer Service"
+    ],
+    "Warehouse": [
+      "Manufacturing and Warehouse",
+      "Transportation and Logistics"
+    ],
+    "Office": [
+      "Administration and Office"
+    ],
+    "Healthcare": [
+      "Healthcare"
+    ],
+    "Security": [
+      "Protective Services"
+    ],
+    "Skilled Trades": [
+      "Installation, Maintenance, and Repairs",
+      "Construction"
+    ],
+    "Technology": [
+      "Software Engineering"
+    ],
+    "Education": [
+      "Education"
+    ],
+    "Delivery": [
+      "Transportation and Logistics"
+    ]
+  },
+  "transferableCategories": {
+    "Fast Food": [
+      "Retail",
+      "Hospitality",
+      "Customer Service",
+      "Restaurants"
+    ],
+    "Restaurants": [
+      "Fast Food",
+      "Hospitality",
+      "Customer Service",
+      "Retail"
+    ],
+    "Retail": [
+      "Customer Service",
+      "Hospitality",
+      "Fast Food",
+      "Warehouse"
+    ],
+    "Hospitality": [
+      "Customer Service",
+      "Restaurants",
+      "Retail",
+      "Office"
+    ],
+    "Customer Service": [
+      "Retail",
+      "Office",
+      "Hospitality"
+    ],
+    "Warehouse": [
+      "Delivery",
+      "Retail",
+      "Skilled Trades"
+    ],
+    "Delivery": [
+      "Warehouse",
+      "Customer Service"
+    ],
+    "Office": [
+      "Customer Service",
+      "Government",
+      "Education"
+    ],
+    "Technology": [
+      "Internships",
+      "Office"
+    ],
+    "Healthcare": [
+      "Customer Service",
+      "Office"
+    ],
+    "Education": [
+      "Office",
+      "Customer Service"
+    ],
+    "Security": [
+      "Customer Service",
+      "Government"
+    ],
+    "Skilled Trades": [
+      "Warehouse",
+      "Delivery"
+    ],
+    "Government": [
+      "Office",
+      "Customer Service"
+    ],
+    "Internships": [
+      "Office",
+      "Retail",
+      "Customer Service"
+    ]
+  },
+  "studentCategories": [
+    "Internships",
+    "Retail",
+    "Fast Food",
+    "Customer Service",
+    "Office"
+  ],
+  "skills": {
+    "customer service": [
+      "customer service",
+      "customer support",
+      "guest service",
+      "serving customers",
+      "customer facing"
+    ],
+    "cash handling": [
+      "cash handling",
+      "handling cash",
+      "cash register",
+      "cashier",
+      "balancing a till",
+      "cash drawer"
+    ],
+    "pos systems": [
+      "pos",
+      "point of sale",
+      "register"
+    ],
+    "food preparation": [
+      "food preparation",
+      "food prep",
+      "prepare food",
+      "preparing food",
+      "cooking",
+      "cook"
+    ],
+    "food safety": [
+      "food safety",
+      "food handler",
+      "servsafe",
+      "food hygiene",
+      "sanitation"
+    ],
+    "teamwork": [
+      "teamwork",
+      "team player",
+      "team environment",
+      "work as a team",
+      "collaboration",
+      "collaborate"
+    ],
+    "communication": [
+      "communication",
+      "communicate",
+      "communication skills",
+      "interpersonal"
+    ],
+    "time management": [
+      "time management",
+      "punctual",
+      "punctuality",
+      "reliable",
+      "dependable"
+    ],
+    "fast-paced work": [
+      "fast paced",
+      "fast paced environment",
+      "under pressure",
+      "multitasking",
+      "multitask"
+    ],
+    "inventory": [
+      "inventory",
+      "stock management",
+      "stocking",
+      "restocking",
+      "stock shelves"
+    ],
+    "sales": [
+      "sales",
+      "upselling",
+      "upsell",
+      "selling",
+      "retail sales"
+    ],
+    "cleaning": [
+      "cleaning",
+      "sanitizing",
+      "janitorial",
+      "housekeeping"
+    ],
+    "leadership": [
+      "leadership",
+      "supervising",
+      "supervisor",
+      "shift lead",
+      "train new",
+      "training new"
+    ],
+    "scheduling": [
+      "scheduling",
+      "calendar management",
+      "appointment setting"
+    ],
+    "phone support": [
+      "phone",
+      "answering phones",
+      "call center",
+      "inbound calls"
+    ],
+    "data entry": [
+      "data entry",
+      "typing",
+      "record keeping",
+      "recordkeeping"
+    ],
+    "microsoft office": [
+      "microsoft office",
+      "ms office",
+      "word",
+      "powerpoint",
+      "outlook"
+    ],
+    "excel": [
+      "excel",
+      "spreadsheets",
+      "spreadsheet"
+    ],
+    "python": [
+      "python"
+    ],
+    "java": [
+      "java"
+    ],
+    "javascript": [
+      "javascript",
+      "typescript",
+      "node js"
+    ],
+    "sql": [
+      "sql",
+      "postgresql",
+      "mysql"
+    ],
+    "git": [
+      "git",
+      "github"
+    ],
+    "html/css": [
+      "html",
+      "css"
+    ],
+    "react": [
+      "react"
+    ],
+    "cloud": [
+      "aws",
+      "azure",
+      "gcp"
+    ],
+    "technical support": [
+      "technical support",
+      "troubleshooting",
+      "troubleshoot",
+      "help desk"
+    ],
+    "data analysis": [
+      "data analysis",
+      "analyzing data",
+      "tableau",
+      "power bi"
+    ],
+    "patient care": [
+      "patient care",
+      "caregiving",
+      "caring for",
+      "bedside"
+    ],
+    "first aid/cpr": [
+      "cpr",
+      "first aid",
+      "bls"
+    ],
+    "tutoring": [
+      "tutoring",
+      "tutor",
+      "mentoring",
+      "lesson planning",
+      "teaching"
+    ],
+    "driving": [
+      "driving",
+      "driver",
+      "clean driving record"
+    ],
+    "forklift": [
+      "forklift",
+      "pallet jack"
+    ],
+    "physical work": [
+      "lifting",
+      "lift up to",
+      "standing for long",
+      "stand for long",
+      "physically active"
+    ],
+    "shipping/receiving": [
+      "shipping",
+      "receiving",
+      "packing",
+      "picking",
+      "order fulfillment"
+    ],
+    "trade skills": [
+      "welding",
+      "electrical",
+      "plumbing",
+      "hvac",
+      "carpentry",
+      "power tools",
+      "hand tools"
+    ],
+    "security patrol": [
+      "patrol",
+      "surveillance",
+      "cctv",
+      "access control",
+      "loss prevention"
+    ],
+    "problem solving": [
+      "problem solving",
+      "resolve issues",
+      "resolving complaints",
+      "conflict resolution"
+    ],
+    "attention to detail": [
+      "attention to detail",
+      "detail oriented",
+      "accuracy",
+      "accurate"
+    ],
+    "bilingual": [
+      "bilingual",
+      "spanish"
+    ],
+    "research": [
+      "research",
+      "literature review"
+    ],
+    "writing": [
+      "writing",
+      "report writing",
+      "copywriting",
+      "proofreading"
+    ]
+  },
+  "transferableSkills": {
+    "cash handling": {
+      "pos systems": "running a register is the same work",
+      "sales": "you already complete sales transactions",
+      "attention to detail": "tills have to balance"
+    },
+    "pos systems": {
+      "cash handling": "registers and cash go together",
+      "data entry": "accurate entry into a system"
+    },
+    "customer service": {
+      "communication": "dealing with the public daily",
+      "problem solving": "handling complaints",
+      "sales": "helping customers choose",
+      "phone support": "same skills, different channel"
+    },
+    "food preparation": {
+      "food safety": "kitchens train on safe handling",
+      "fast-paced work": "kitchens run on rush periods",
+      "attention to detail": "orders and recipes need accuracy"
+    },
+    "food safety": {
+      "cleaning": "sanitation standards",
+      "attention to detail": "following safety procedures"
+    },
+    "fast-paced work": {
+      "time management": "keeping up during rushes",
+      "physical work": "on your feet through a shift"
+    },
+    "teamwork": {
+      "communication": "coordinating during a shift"
+    },
+    "inventory": {
+      "shipping/receiving": "tracking and moving stock",
+      "attention to detail": "counts need accuracy",
+      "physical work": "stocking is physical"
+    },
+    "sales": {
+      "customer service": "selling means serving",
+      "communication": "explaining products"
+    },
+    "leadership": {
+      "scheduling": "organizing a team's shifts",
+      "communication": "directing and training people",
+      "problem solving": "being the person who handles issues"
+    },
+    "phone support": {
+      "customer service": "same skills, different channel",
+      "communication": "talking people through things"
+    },
+    "data entry": {
+      "attention to detail": "records need accuracy",
+      "microsoft office": "usually done in office software"
+    },
+    "excel": {
+      "data entry": "working in spreadsheets",
+      "data analysis": "basic analysis in spreadsheets"
+    },
+    "python": {
+      "data analysis": "common analysis language",
+      "technical support": "comfort debugging"
+    },
+    "technical support": {
+      "customer service": "helping people with problems",
+      "problem solving": "troubleshooting"
+    },
+    "tutoring": {
+      "communication": "explaining things clearly",
+      "leadership": "guiding other people"
+    },
+    "research": {
+      "writing": "writing up findings",
+      "attention to detail": "careful with sources"
+    },
+    "writing": {
+      "communication": "clear written communication"
+    },
+    "driving": {
+      "time management": "keeping to routes and times"
+    },
+    "shipping/receiving": {
+      "inventory": "tracking goods in and out",
+      "physical work": "moving goods"
+    },
+    "cleaning": {
+      "food safety": "sanitation habits",
+      "attention to detail": "working to a standard"
+    },
+    "patient care": {
+      "customer service": "caring for people's needs",
+      "communication": "working with families"
+    },
+    "security patrol": {
+      "attention to detail": "noticing what's wrong",
+      "customer service": "dealing with the public"
+    }
+  },
+  "typicalSkills": {
+    "Fast Food": [
+      "customer service",
+      "cash handling",
+      "food safety",
+      "food preparation",
+      "fast-paced work",
+      "teamwork"
+    ],
+    "Retail": [
+      "customer service",
+      "cash handling",
+      "pos systems",
+      "inventory",
+      "sales",
+      "teamwork"
+    ],
+    "Restaurants": [
+      "customer service",
+      "food safety",
+      "fast-paced work",
+      "teamwork",
+      "communication"
+    ],
+    "Warehouse": [
+      "physical work",
+      "shipping/receiving",
+      "inventory",
+      "teamwork"
+    ],
+    "Customer Service": [
+      "customer service",
+      "communication",
+      "problem solving",
+      "phone support"
+    ],
+    "Internships": [
+      "communication",
+      "teamwork",
+      "time management"
+    ],
+    "Office": [
+      "microsoft office",
+      "data entry",
+      "communication",
+      "scheduling",
+      "phone support"
+    ],
+    "Healthcare": [
+      "patient care",
+      "communication",
+      "attention to detail"
+    ],
+    "Security": [
+      "security patrol",
+      "communication",
+      "attention to detail"
+    ],
+    "Skilled Trades": [
+      "trade skills",
+      "problem solving",
+      "physical work"
+    ],
+    "Technology": [
+      "problem solving",
+      "git",
+      "communication"
+    ],
+    "Government": [
+      "communication",
+      "attention to detail",
+      "microsoft office"
+    ],
+    "Education": [
+      "tutoring",
+      "communication",
+      "leadership"
+    ],
+    "Hospitality": [
+      "customer service",
+      "communication",
+      "cleaning",
+      "teamwork",
+      "problem solving"
+    ],
+    "Delivery": [
+      "driving",
+      "time management",
+      "customer service",
+      "physical work"
+    ]
+  },
+  "relatedKeywords": {
+    "cashier": [
+      "front end associate",
+      "checkout",
+      "register",
+      "customer service associate",
+      "retail associate"
+    ],
+    "barista": [
+      "coffee",
+      "cafe"
+    ],
+    "cook": [
+      "line cook",
+      "prep cook",
+      "kitchen"
+    ],
+    "driver": [
+      "delivery driver",
+      "courier",
+      "route driver"
+    ],
+    "receptionist": [
+      "front desk",
+      "office assistant"
+    ],
+    "stocker": [
+      "stock associate",
+      "overnight stock",
+      "inventory associate"
+    ],
+    "nurse": [
+      "rn",
+      "lpn",
+      "nursing"
+    ],
+    "tutor": [
+      "teaching assistant",
+      "instructor"
+    ],
+    "programmer": [
+      "software developer",
+      "software engineer"
+    ],
+    "developer": [
+      "software engineer",
+      "programmer"
+    ],
+    "housekeeper": [
+      "room attendant",
+      "housekeeping"
+    ],
+    "waiter": [
+      "server",
+      "waitress"
+    ],
+    "server": [
+      "waiter",
+      "waitress"
+    ],
+    "janitor": [
+      "custodian",
+      "cleaner"
+    ],
+    "forklift": [
+      "forklift operator",
+      "material handler"
+    ]
+  },
+  "keywordCategoryAliases": {
+    "fast food": "Fast Food",
+    "retail": "Retail",
+    "restaurants": "Restaurants",
+    "warehouse": "Warehouse",
+    "customer service": "Customer Service",
+    "internships": "Internships",
+    "office": "Office",
+    "healthcare": "Healthcare",
+    "security": "Security",
+    "skilled trades": "Skilled Trades",
+    "technology": "Technology",
+    "government": "Government",
+    "education": "Education",
+    "hospitality": "Hospitality",
+    "delivery": "Delivery",
+    "restaurant": "Restaurants",
+    "internship": "Internships",
+    "intern": "Internships",
+    "hotel": "Hospitality",
+    "warehouses": "Warehouse",
+    "qsr": "Fast Food"
+  },
+  "jobTypeKeywords": {
+    "part time": "part_time",
+    "full time": "full_time",
+    "contract": "contract",
+    "temporary": "temporary",
+    "seasonal": "temporary"
+  },
+  "entryLevelTerms": [
+    "entry level",
+    "no experience",
+    "no experience required",
+    "no experience necessary",
+    "will train",
+    "paid training",
+    "training provided",
+    "on the job training",
+    "first job",
+    "beginner"
+  ],
+  "seniorTitleTerms": [
+    "senior",
+    "sr",
+    "lead",
+    "principal",
+    "director",
+    "head of",
+    "manager",
+    "supervisor",
+    "vice president",
+    "staff engineer"
+  ],
+  "corporateTitleTerms": [
+    "software",
+    "engineer",
+    "developer",
+    "accountant",
+    "analyst",
+    "attorney",
+    "counsel",
+    "vice president",
+    "data scientist",
+    "architect"
+  ]
+}

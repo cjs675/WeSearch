@@ -28,6 +28,10 @@ npm run typecheck
 npm run build
 ```
 
+```bash
+npm test
+```
+
 ## Who works where
 
 | Branch | Owns | Delivers |
