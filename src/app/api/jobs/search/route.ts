@@ -43,5 +43,14 @@ export async function POST(httpRequest: Request) {
     return Response.json({ error: "Request body must be a JSON object." }, { status: 400 });
   }
   const fields = body as Record<string, unknown>;
-  return Response.json(await searchJobs(toRequest(fields), (fields.resume as Resume | undefined) ?? null));
+  // The page nests its search under `request`. Plain fields at the top level work too.
+  const search = typeof fields.request === "object" && fields.request !== null ? (fields.request as Record<string, unknown>) : fields;
+  return Response.json(await searchJobs(toRequest(search), (fields.resume as Resume | undefined) ?? null));
+}
+
+/** Query: ?query=&location=&category= for a simple search with no resume. */
+export async function GET(httpRequest: Request) {
+  if (!allowRequest(httpRequest)) return Response.json({ error: "Too many searches. Wait a minute and try again." }, { status: 429 });
+  const params = new URL(httpRequest.url).searchParams;
+  return Response.json(await searchJobs(toRequest({ keywords: params.get("query") ?? "", location: params.get("location") ?? "", categories: params.getAll("category") })));
 }
