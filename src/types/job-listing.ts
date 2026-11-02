@@ -6,6 +6,8 @@ export interface Salary {
   /** Yearly amounts in US dollars. */
   min?: number;
   max?: number;
+  /** Pay as the source wrote it, when it can't be read as yearly numbers. */
+  text?: string;
   /** True when the job board estimated the pay and the employer didn't state it. */
   estimated: boolean;
 }
@@ -39,7 +41,11 @@ export interface JobSearchRequest {
   remote?: "any" | "only" | "exclude";
   jobType?: JobType;
   minSalary?: number;
+  /** With minSalary, also hide listings that don't state their pay. */
+  salaryRequired?: boolean;
   minScore?: number;
+  /** Hide older listings. Defaults to 90 days; null shows every age. */
+  maxAgeDays?: number | null;
 }
 
 export type JobSourceState = "ok" | "not_configured" | "error";
@@ -50,4 +56,6 @@ export interface JobSourceStatus {
   state: JobSourceState;
   count: number;
   message: string;
+  /** When set, the source's terms require the page to credit it and link here. */
+  attributionUrl?: string;
 }

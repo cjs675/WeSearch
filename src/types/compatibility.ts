@@ -1,3 +1,4 @@
+import type { JobCategory } from "./job-category";
 import type { JobListing, JobSourceStatus } from "./job-listing";
 
 export interface ScoreComponent {
@@ -21,6 +22,8 @@ export interface Qualification {
   status: QualificationStatus;
   /** The posting's own words. */
   evidence: string;
+  /** The posting says this can be obtained after hiring, so it doesn't lower the score. */
+  canGetAfterHire: boolean;
 }
 
 export interface CompatibilityScore {
@@ -30,6 +33,8 @@ export interface CompatibilityScore {
   matchedSkills: string[];
   transferableSkills: TransferableSkill[];
   missingSkills: string[];
+  /** Skills scored because they're usual for the role, not because the posting states them. Label these on screen. */
+  skillsTypicalForRole: string[];
   qualifications: Qualification[];
 }
 
@@ -37,12 +42,21 @@ export interface JobMatch {
   job: JobListing;
   /** Null when no resume was provided. */
   compatibility: CompatibilityScore | null;
+  entryLevel: boolean;
+  matchedKeywords: string[];
 }
 
 /** What feature/job-matching returns and feature/frontend displays. */
 export interface JobSearchResponse {
   matches: JobMatch[];
+  /** All matches found, which can be more than the number returned. */
+  total: number;
   sources: JobSourceStatus[];
+  searchTerms: string[];
+  relatedTitles: string[];
+  /** Categories the resume points to, whether or not they were searched. */
+  suggestedCategories: JobCategory[];
+  notes: string[];
   /** Explains an empty result. Sample listings must never stand in for real ones. */
   message: string | null;
 }
